@@ -60,6 +60,10 @@ CREATE TABLE IF NOT EXISTS bugs (
     found_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     resolved_date TIMESTAMP,
     retested_date TIMESTAMP,
+    criticality VARCHAR(50) DEFAULT 'media',
+    risk VARCHAR(50) DEFAULT 'medio',
+    responsible_qa VARCHAR(255),
+    responsible_dev VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -98,13 +102,6 @@ CREATE TABLE IF NOT EXISTS performance_plans (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
--- Insert sample services
-INSERT INTO services (name, description) VALUES
-('API Gateway', 'Serviço principal de gateway de APIs'),
-('Auth Service', 'Serviço de autenticação e autorização'),
-('Payment Service', 'Serviço de processamento de pagamentos'),
-('Notification Service', 'Serviço de notificações e emails');
 
 -- Create indexes for better performance
 CREATE INDEX idx_tests_service ON tests(service_id);

@@ -1,9 +1,15 @@
-import { getAlerts } from "@/lib/db"
 import { AlertTriangle, Clock, Bug, FlaskConical } from "lucide-react"
 
-export async function AlertsSection() {
-  const alerts = await getAlerts()
+interface Alert {
+  id: number;
+  type: 'bug' | 'test';
+  severity: 'critical' | 'warning';
+  title: string;
+  description: string;
+  days_open: number;
+}
 
+export function AlertsSection({ alerts }: { alerts: Alert[] }) {
   if (alerts.length === 0) {
     return null
   }

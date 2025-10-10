@@ -9,7 +9,7 @@
     "start": "next start"
   },
   "dependencies": {
-    "@vercel/postgres": "latest",
+    "pg": "8.12.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "latest",
@@ -30,6 +30,7 @@
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/pg": "8.11.0",
     "@tailwindcss/postcss": "^4.0.0-alpha.16",
     "postcss": "^8.5",
     "tailwindcss": "^4.1.9",

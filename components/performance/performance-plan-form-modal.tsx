@@ -1,18 +1,20 @@
 "use client"
 
 import type React from "react"
-
 import { X } from "lucide-react"
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import type { PerformancePlan } from "@/lib/types"
 
 interface PerformancePlanFormModalProps {
   isOpen: boolean
   onClose: () => void
   plan?: PerformancePlan
+  services?: { id: number; name: string }[]
 }
 
-export function PerformancePlanFormModal({ isOpen, onClose, plan }: PerformancePlanFormModalProps) {
+export function PerformancePlanFormModal({ isOpen, onClose, plan, services = [] }: PerformancePlanFormModalProps) {
+  const router = useRouter()
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -24,6 +26,7 @@ export function PerformancePlanFormModal({ isOpen, onClose, plan }: PerformanceP
     observations: "",
     service_id: "",
   })
+  const [error, setError] = useState("")
 
   useEffect(() => {
     if (plan) {
@@ -36,16 +39,35 @@ export function PerformancePlanFormModal({ isOpen, onClose, plan }: PerformanceP
         results: plan.results || "",
         status: plan.status || "planned",
         observations: plan.observations || "",
-        service_id: plan.service_id?.toString() || "",
+        service_id: plan.service_id ? String(plan.service_id) : "",
       })
     }
   }, [plan])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // TODO: Implement API call to save performance plan
-    console.log("Saving performance plan:", formData)
-    onClose()
+    setError("")
+    if (!formData.service_id) {
+      setError("Selecione um serviço antes de salvar.")
+      return
+    }
+    try {
+      const isEdit = !!plan && plan.id
+      const response = await fetch("/api/performance", {
+        method: isEdit ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...formData,
+          service_id: formData.service_id ? Number(formData.service_id) : null,
+          ...(isEdit ? { id: plan.id } : {}),
+        }),
+      })
+      if (!response.ok) throw new Error(isEdit ? "Erro ao atualizar plano de performance" : "Erro ao criar plano de performance")
+      router.refresh()
+      onClose()
+    } catch (err) {
+      setError(plan ? "Erro ao atualizar plano de performance!" : "Erro ao criar plano de performance!")
+    }
   }
 
   if (!isOpen) return null
@@ -77,7 +99,7 @@ export function PerformancePlanFormModal({ isOpen, onClose, plan }: PerformanceP
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-foreground mb-2">Descrição</label>
+              <label className="block text-sm font-medium text-foreground mb-2">Descrição *</label>
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -88,7 +110,7 @@ export function PerformancePlanFormModal({ isOpen, onClose, plan }: PerformanceP
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Tipo de Teste</label>
+              <label className="block text-sm font-medium text-foreground mb-2">Tipo de Teste *</label>
               <input
                 type="text"
                 value={formData.test_type}
@@ -114,7 +136,7 @@ export function PerformancePlanFormModal({ isOpen, onClose, plan }: PerformanceP
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-foreground mb-2">Métricas Alvo</label>
+              <label className="block text-sm font-medium text-foreground mb-2">Métricas Alvo *</label>
               <textarea
                 value={formData.target_metrics}
                 onChange={(e) => setFormData({ ...formData, target_metrics: e.target.value })}
@@ -125,7 +147,7 @@ export function PerformancePlanFormModal({ isOpen, onClose, plan }: PerformanceP
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-foreground mb-2">Massa de Dados / Cenário</label>
+              <label className="block text-sm font-medium text-foreground mb-2">Massa de Dados / Cenário *</label>
               <textarea
                 value={formData.test_data}
                 onChange={(e) => setFormData({ ...formData, test_data: e.target.value })}
@@ -136,7 +158,7 @@ export function PerformancePlanFormModal({ isOpen, onClose, plan }: PerformanceP
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-foreground mb-2">Resultados</label>
+              <label className="block text-sm font-medium text-foreground mb-2">Resultados *</label>
               <textarea
                 value={formData.results}
                 onChange={(e) => setFormData({ ...formData, results: e.target.value })}
@@ -158,17 +180,24 @@ export function PerformancePlanFormModal({ isOpen, onClose, plan }: PerformanceP
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Serviço</label>
-              <input
-                type="text"
+              <label className="block text-sm font-medium text-foreground mb-2">Serviço *</label>
+              <select
+                required
                 value={formData.service_id}
                 onChange={(e) => setFormData({ ...formData, service_id: e.target.value })}
                 className="w-full px-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="ID do serviço"
-              />
+              >
+                <option value="">Selecione o serviço</option>
+                {services.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
             </div>
           </div>
 
+          {error && (
+            <div className="text-red-500 text-sm mb-2">{error}</div>
+          )}
           <div className="flex items-center justify-end gap-3 pt-6 border-t border-border">
             <button
               type="button"

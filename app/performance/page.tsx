@@ -3,6 +3,8 @@ import { PerformanceHeader } from "@/components/performance/performance-header"
 import { PerformancePlansList } from "@/components/performance/performance-plans-list"
 import { PerformanceFilters } from "@/components/performance/performance-filters"
 
+export const dynamic = 'force-dynamic'
+
 export default function PerformancePage() {
   return (
     <div className="min-h-screen bg-background">

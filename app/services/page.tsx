@@ -2,6 +2,8 @@ import { Suspense } from "react"
 import { ServicesHeader } from "@/components/services/services-header"
 import { ServicesList } from "@/components/services/services-list"
 
+export const dynamic = 'force-dynamic'
+
 export default function ServicesPage() {
   return (
     <div className="min-h-screen bg-background">

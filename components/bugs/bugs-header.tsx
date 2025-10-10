@@ -1,13 +1,22 @@
+
 "use client"
 
+import { useEffect, useState } from "react"
+
 import { Plus } from "lucide-react"
-import { useState } from "react"
 import { BugFormModal } from "./bug-form-modal"
 import { ExcelActions } from "@/components/shared/excel-actions"
 import { formatDateForExcel, parseDateFromExcel } from "@/lib/excel-utils"
 
 export function BugsHeader() {
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [services, setServices] = useState([])
+  const [tests, setTests] = useState([])
+
+  useEffect(() => {
+    fetch("/api/services").then(res => res.json()).then(setServices)
+    fetch("/api/tests").then(res => res.json()).then(setTests)
+  }, [])
 
   const handleExport = async () => {
     const response = await fetch("/api/bugs")
@@ -89,7 +98,7 @@ export function BugsHeader() {
         </div>
       </div>
 
-      <BugFormModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+  <BugFormModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} services={services} tests={tests} />
     </>
   )
 }

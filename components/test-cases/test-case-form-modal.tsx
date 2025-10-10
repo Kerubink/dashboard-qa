@@ -4,6 +4,7 @@ import type React from "react"
 
 import { X } from "lucide-react"
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import type { TestCase } from "@/lib/types"
 import { SearchableSelect } from "@/components/shared/searchable-select"
 
@@ -22,8 +23,8 @@ const DEFAULT_GHERKIN = `Cenário: [Título do cenário]
   E [ação adicional]
   Então [resultado esperado]
   E [resultado adicional]`
-
 export function TestCaseFormModal({ isOpen, onClose, testCase, services = [], nextId = 1 }: TestCaseFormModalProps) {
+  const router = useRouter()
   const [formData, setFormData] = useState({
     name: "",
     user_story: "",
@@ -34,6 +35,7 @@ export function TestCaseFormModal({ isOpen, onClose, testCase, services = [], ne
     observations: "",
     service_id: "",
   })
+  const [error, setError] = useState("")
 
   useEffect(() => {
     if (testCase) {
@@ -45,7 +47,7 @@ export function TestCaseFormModal({ isOpen, onClose, testCase, services = [], ne
         status: testCase.status || "pending",
         is_automated: testCase.is_automated || false,
         observations: testCase.observations || "",
-        service_id: testCase.service_id?.toString() || "",
+        service_id: testCase.service_id ? String(testCase.service_id) : "",
       })
     } else {
       const ctNumber = String(nextId).padStart(4, "0")
@@ -64,8 +66,28 @@ export function TestCaseFormModal({ isOpen, onClose, testCase, services = [], ne
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("Saving test case:", formData)
-    onClose()
+    setError("")
+    if (!formData.service_id) {
+      setError("Selecione um serviço antes de salvar.")
+      return
+    }
+    try {
+      const isEdit = !!testCase && testCase.id
+      const response = await fetch("/api/test-cases", {
+        method: isEdit ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...formData,
+          service_id: formData.service_id ? Number(formData.service_id) : null,
+          ...(isEdit ? { id: testCase.id } : {}),
+        }),
+      })
+      if (!response.ok) throw new Error(isEdit ? "Erro ao atualizar caso de teste" : "Erro ao criar caso de teste")
+      router.refresh()
+      onClose()
+    } catch (err) {
+      setError(testCase ? "Erro ao atualizar caso de teste!" : "Erro ao criar caso de teste!")
+    }
   }
 
   if (!isOpen) return null
@@ -77,28 +99,16 @@ export function TestCaseFormModal({ isOpen, onClose, testCase, services = [], ne
           <h2 className="text-2xl font-bold text-foreground">
             {testCase ? "Editar Caso de Teste" : "Novo Caso de Teste"}
           </h2>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-accent transition-colors">
-            <X className="w-5 h-5 text-muted-foreground" />
+          <button
+            onClick={onClose}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Nome do Caso de Teste *
-                <span className="text-xs text-muted-foreground ml-2">(Prefixo CTXXXX- é automático)</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="Ex: CT0001 - Login com credenciais válidas"
-              />
-            </div>
-
+        <form onSubmit={handleSubmit} className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">Status *</label>
               <select
@@ -115,11 +125,12 @@ export function TestCaseFormModal({ isOpen, onClose, testCase, services = [], ne
 
             <div>
               <SearchableSelect
-                label="Serviço"
+                label="Serviço *"
                 options={services}
                 value={formData.service_id}
                 onChange={(value) => setFormData({ ...formData, service_id: value })}
                 placeholder="Buscar serviço..."
+                required
               />
             </div>
 
@@ -136,8 +147,9 @@ export function TestCaseFormModal({ isOpen, onClose, testCase, services = [], ne
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-foreground mb-2">User Story</label>
+              <label className="block text-sm font-medium text-foreground mb-2">User Story *</label>
               <textarea
+                required
                 value={formData.user_story}
                 onChange={(e) => setFormData({ ...formData, user_story: e.target.value })}
                 rows={3}
@@ -148,10 +160,11 @@ export function TestCaseFormModal({ isOpen, onClose, testCase, services = [], ne
 
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-foreground mb-2">
-                Gherkin (Passo a Passo)
+                Gherkin (Passo a Passo) *
                 <span className="text-xs text-muted-foreground ml-2">(Template pré-preenchido para edição)</span>
               </label>
               <textarea
+                required
                 value={formData.gherkin}
                 onChange={(e) => setFormData({ ...formData, gherkin: e.target.value })}
                 rows={10}
@@ -160,8 +173,9 @@ export function TestCaseFormModal({ isOpen, onClose, testCase, services = [], ne
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-foreground mb-2">Massa de Dados</label>
+              <label className="block text-sm font-medium text-foreground mb-2">Massa de Dados *</label>
               <textarea
+                required
                 value={formData.test_data}
                 onChange={(e) => setFormData({ ...formData, test_data: e.target.value })}
                 rows={3}
@@ -171,8 +185,9 @@ export function TestCaseFormModal({ isOpen, onClose, testCase, services = [], ne
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-foreground mb-2">Observações</label>
+              <label className="block text-sm font-medium text-foreground mb-2">Observações *</label>
               <textarea
+                required
                 value={formData.observations}
                 onChange={(e) => setFormData({ ...formData, observations: e.target.value })}
                 rows={3}
@@ -182,6 +197,9 @@ export function TestCaseFormModal({ isOpen, onClose, testCase, services = [], ne
             </div>
           </div>
 
+          {error && (
+            <div className="text-red-500 text-sm mb-2">{error}</div>
+          )}
           <div className="flex items-center justify-end gap-3 pt-6 border-t border-border">
             <button
               type="button"

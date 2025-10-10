@@ -4,6 +4,8 @@ import { BugsList } from "@/components/bugs/bugs-list"
 import { BugsFilters } from "@/components/bugs/bugs-filters"
 import { BugsStats } from "@/components/bugs/bugs-stats"
 
+export const dynamic = 'force-dynamic'
+
 export default function BugsPage() {
   return (
     <div className="min-h-screen bg-background">

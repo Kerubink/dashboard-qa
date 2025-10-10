@@ -3,6 +3,8 @@ import { TestsHeader } from "@/components/tests/tests-header"
 import { TestsList } from "@/components/tests/tests-list"
 import { TestsFilters } from "@/components/tests/tests-filters"
 
+export const dynamic = 'force-dynamic'
+
 export default function TestsPage() {
   return (
     <div className="min-h-screen bg-background">

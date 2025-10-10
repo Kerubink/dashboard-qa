@@ -2,11 +2,18 @@
 
 import { Plus } from "lucide-react"
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { ServiceFormModal } from "./service-form-modal"
 import { ExcelActions } from "@/components/shared/excel-actions"
 
 export function ServicesHeader() {
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const router = useRouter()
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false)
+    router.refresh()
+  }
 
   const handleExport = async () => {
     const response = await fetch("/api/services")
@@ -80,7 +87,7 @@ export function ServicesHeader() {
         </div>
       </div>
 
-      <ServiceFormModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <ServiceFormModal isOpen={isModalOpen} onClose={handleCloseModal} />
     </>
   )
 }

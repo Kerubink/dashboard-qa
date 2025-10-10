@@ -3,6 +3,8 @@ import { ImprovementsHeader } from "@/components/improvements/improvements-heade
 import { ImprovementsList } from "@/components/improvements/improvements-list"
 import { ImprovementsFilters } from "@/components/improvements/improvements-filters"
 
+export const dynamic = 'force-dynamic'
+
 export default function ImprovementsPage() {
   return (
     <div className="min-h-screen bg-background">

@@ -51,6 +51,7 @@ export interface Bug {
   user_story: string
   gherkin: string
   evidence: string
+  evidence_link?: string
   status: "open" | "in_progress" | "resolved" | "closed"
   criticality: "baixa" | "media" | "alta" | "critica"
   risk: "baixo" | "medio" | "alto" | "critico"

@@ -1,9 +1,9 @@
 "use client"
 
 import type React from "react"
-
 import { X } from "lucide-react"
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import type { Bug } from "@/lib/types"
 import { SearchableSelect } from "@/components/shared/searchable-select"
 
@@ -22,6 +22,7 @@ const DEFAULT_GHERKIN = `Cenário: [Título do cenário]
   E [condição adicional]`
 
 export function BugFormModal({ isOpen, onClose, bug, tests = [], services = [] }: BugFormModalProps) {
+  const router = useRouter()
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -36,7 +37,9 @@ export function BugFormModal({ isOpen, onClose, bug, tests = [], services = [] }
     test_id: "",
     responsible_qa: "",
     responsible_dev: "",
+    evidence_link: "",
   })
+  const [error, setError] = useState("")
 
   useEffect(() => {
     if (bug) {
@@ -50,13 +53,13 @@ export function BugFormModal({ isOpen, onClose, bug, tests = [], services = [] }
         criticality: bug.criticality || "media",
         risk: bug.risk || "medio",
         observations: bug.observations || "",
-        service_id: bug.service_id?.toString() || "",
-        test_id: bug.test_id?.toString() || "",
+        service_id: bug.service_id !== null && bug.service_id !== undefined ? String(bug.service_id) : "",
+        test_id: bug.test_id !== null && bug.test_id !== undefined ? String(bug.test_id) : "",
         responsible_qa: bug.responsible_qa || "",
         responsible_dev: bug.responsible_dev || "",
+        evidence_link: bug.evidence_link || "",
       })
     } else {
-      // Reset to default when creating new bug
       setFormData({
         name: "",
         description: "",
@@ -71,14 +74,44 @@ export function BugFormModal({ isOpen, onClose, bug, tests = [], services = [] }
         test_id: "",
         responsible_qa: "",
         responsible_dev: "",
+        evidence_link: "",
       })
     }
+    setError("")
   }, [bug, isOpen])
+
+  useEffect(() => {
+    console.log("Dados recebidos para testes:", tests);
+    console.log("Dados recebidos para serviços:", services);
+    console.log("Estado inicial do formulário:", formData);
+  }, [tests, services, formData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("Saving bug:", formData)
-    onClose()
+    setError("")
+    // Validação de obrigatoriedade de todos os campos (exceto evidence_link)
+    if (!formData.name || !formData.description || !formData.user_story || !formData.gherkin || !formData.evidence || !formData.status || !formData.criticality || !formData.risk || !formData.observations || !formData.service_id || !formData.test_id || !formData.responsible_qa || !formData.responsible_dev) {
+      setError("Preencha todos os campos obrigatórios antes de salvar.")
+      return
+    }
+    try {
+      const isEdit = !!bug && bug.id
+      const response = await fetch("/api/bugs", {
+        method: isEdit ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...formData,
+          service_id: formData.service_id ? Number(formData.service_id) : null,
+          test_id: formData.test_id ? Number(formData.test_id) : null,
+          ...(isEdit ? { id: bug.id } : {}),
+        }),
+      })
+      if (!response.ok) throw new Error(isEdit ? "Erro ao atualizar bug" : "Erro ao criar bug")
+      router.refresh()
+      onClose()
+    } catch (err) {
+      setError(bug ? "Erro ao atualizar bug!" : "Erro ao criar bug!")
+    }
   }
 
   if (!isOpen) return null
@@ -165,21 +198,23 @@ export function BugFormModal({ isOpen, onClose, bug, tests = [], services = [] }
 
             <div>
               <SearchableSelect
-                label="Teste Relacionado"
+                label="Teste Relacionado *"
                 options={tests}
                 value={formData.test_id}
                 onChange={(value) => setFormData({ ...formData, test_id: value })}
                 placeholder="Buscar teste..."
+                required
               />
             </div>
 
             <div className="md:col-span-2">
               <SearchableSelect
-                label="Serviço"
+                label="Serviço *"
                 options={services}
                 value={formData.service_id}
                 onChange={(value) => setFormData({ ...formData, service_id: value })}
                 placeholder="Buscar serviço..."
+                required
               />
             </div>
 
@@ -227,11 +262,22 @@ export function BugFormModal({ isOpen, onClose, bug, tests = [], services = [] }
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-foreground mb-2">Evidências</label>
-              <input
-                type="url"
+              <label className="block text-sm font-medium text-foreground mb-2">Evidências *</label>
+              <textarea
+                required
                 value={formData.evidence}
                 onChange={(e) => setFormData({ ...formData, evidence: e.target.value })}
+                rows={2}
+                className="w-full px-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                placeholder="Descreva as evidências, links, prints, logs, etc."
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-foreground mb-2">Link de Evidência (opcional)</label>
+              <input
+                type="url"
+                value={formData.evidence_link}
+                onChange={(e) => setFormData({ ...formData, evidence_link: e.target.value })}
                 className="w-full px-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary"
                 placeholder="Link para screenshots, vídeos, logs..."
               />
@@ -249,6 +295,9 @@ export function BugFormModal({ isOpen, onClose, bug, tests = [], services = [] }
             </div>
           </div>
 
+          {error && (
+            <div className="text-red-500 text-sm mb-2">{error}</div>
+          )}
           <div className="flex items-center justify-end gap-3 pt-6 border-t border-border">
             <button
               type="button"

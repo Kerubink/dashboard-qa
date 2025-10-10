@@ -1,13 +1,20 @@
+
 "use client"
 
+import { useEffect, useState } from "react"
+
 import { Plus } from "lucide-react"
-import { useState } from "react"
 import { TestCaseFormModal } from "./test-case-form-modal"
 import { ExcelActions } from "@/components/shared/excel-actions"
 import { formatDateForExcel } from "@/lib/excel-utils"
 
 export function TestCasesHeader() {
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [services, setServices] = useState([])
+
+  useEffect(() => {
+    fetch("/api/services").then(res => res.json()).then(setServices)
+  }, [])
 
   const handleExport = async () => {
     const response = await fetch("/api/test-cases")
@@ -84,7 +91,7 @@ export function TestCasesHeader() {
         </div>
       </div>
 
-      <TestCaseFormModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+  <TestCaseFormModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} services={services} />
     </>
   )
 }

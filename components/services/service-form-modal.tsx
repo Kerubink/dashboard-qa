@@ -24,14 +24,39 @@ export function ServiceFormModal({ isOpen, onClose, service }: ServiceFormModalP
         name: service.name || "",
         description: service.description || "",
       })
+    } else {
+      setFormData({
+        name: "",
+        description: "",
+      })
     }
-  }, [service])
+  }, [service, isOpen])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // TODO: Implement API call to save service
-    console.log("Saving service:", formData)
-    onClose()
+    try {
+      const isEdit = !!service && service.id
+      const response = await fetch("/api/services", {
+        method: isEdit ? "PUT" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...formData,
+          ...(isEdit ? { id: service.id } : {}),
+        }),
+      })
+
+      if (response.ok) {
+        setFormData({ name: "", description: "" })
+        onClose()
+      } else {
+        // Handle errors
+        console.error(isEdit ? "Failed to update service" : "Failed to save service")
+      }
+    } catch (error) {
+      console.error("An error occurred:", error)
+    }
   }
 
   if (!isOpen) return null
@@ -52,6 +77,7 @@ export function ServiceFormModal({ isOpen, onClose, service }: ServiceFormModalP
             <input
               type="text"
               required
+              minLength={3}
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className="w-full px-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary"

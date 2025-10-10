@@ -1,13 +1,20 @@
+
 "use client"
 
+import { useEffect, useState } from "react"
+
 import { Plus } from "lucide-react"
-import { useState } from "react"
 import { ImprovementFormModal } from "./improvement-form-modal"
 import { ExcelActions } from "@/components/shared/excel-actions"
 import { formatDateForExcel, parseDateFromExcel } from "@/lib/excel-utils"
 
 export function ImprovementsHeader() {
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [services, setServices] = useState([])
+
+  useEffect(() => {
+    fetch("/api/services").then(res => res.json()).then(setServices)
+  }, [])
 
   const handleExport = async () => {
     const response = await fetch("/api/improvements")
@@ -89,7 +96,7 @@ export function ImprovementsHeader() {
         </div>
       </div>
 
-      <ImprovementFormModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+  <ImprovementFormModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} services={services} />
     </>
   )
 }

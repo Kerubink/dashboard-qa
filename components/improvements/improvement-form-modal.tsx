@@ -1,9 +1,9 @@
 "use client"
 
 import type React from "react"
-
 import { X } from "lucide-react"
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import type { Improvement } from "@/lib/types"
 import { SearchableSelect } from "@/components/shared/searchable-select"
 
@@ -21,6 +21,7 @@ const DEFAULT_GHERKIN = `Cenário: [Título da melhoria]
   E [benefício adicional]`
 
 export function ImprovementFormModal({ isOpen, onClose, improvement, services = [] }: ImprovementFormModalProps) {
+  const router = useRouter()
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -31,6 +32,7 @@ export function ImprovementFormModal({ isOpen, onClose, improvement, services = 
     observations: "",
     service_id: "",
   })
+  const [error, setError] = useState("")
 
   useEffect(() => {
     if (improvement) {
@@ -42,7 +44,7 @@ export function ImprovementFormModal({ isOpen, onClose, improvement, services = 
         evidence: improvement.evidence || "",
         status: improvement.status || "proposed",
         observations: improvement.observations || "",
-        service_id: improvement.service_id?.toString() || "",
+        service_id: improvement.service_id ? String(improvement.service_id) : "",
       })
     } else {
       setFormData({
@@ -60,8 +62,28 @@ export function ImprovementFormModal({ isOpen, onClose, improvement, services = 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("Saving improvement:", formData)
-    onClose()
+    setError("")
+    if (!formData.service_id) {
+      setError("Selecione um serviço antes de salvar.")
+      return
+    }
+    try {
+      const isEdit = !!improvement && improvement.id
+      const response = await fetch("/api/improvements", {
+        method: isEdit ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...formData,
+          service_id: formData.service_id ? Number(formData.service_id) : null,
+          ...(isEdit ? { id: improvement.id } : {}),
+        }),
+      })
+      if (!response.ok) throw new Error(isEdit ? "Erro ao atualizar melhoria" : "Erro ao criar melhoria")
+      router.refresh()
+      onClose()
+    } catch (err) {
+      setError(improvement ? "Erro ao atualizar melhoria!" : "Erro ao criar melhoria!")
+    }
   }
 
   if (!isOpen) return null
@@ -91,13 +113,14 @@ export function ImprovementFormModal({ isOpen, onClose, improvement, services = 
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-foreground mb-2">Descrição</label>
+              <label className="block text-sm font-medium text-foreground mb-2">Descrição *</label>
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 rows={3}
                 className="w-full px-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary resize-none"
                 placeholder="Descreva a melhoria proposta..."
+                required
               />
             </div>
 
@@ -119,22 +142,24 @@ export function ImprovementFormModal({ isOpen, onClose, improvement, services = 
 
             <div>
               <SearchableSelect
-                label="Serviço"
+                label="Serviço *"
                 options={services}
                 value={formData.service_id}
                 onChange={(value) => setFormData({ ...formData, service_id: value })}
                 placeholder="Buscar serviço..."
+                required
               />
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-foreground mb-2">User Story</label>
+              <label className="block text-sm font-medium text-foreground mb-2">User Story *</label>
               <textarea
                 value={formData.user_story}
                 onChange={(e) => setFormData({ ...formData, user_story: e.target.value })}
                 rows={3}
                 className="w-full px-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary resize-none"
                 placeholder="Como [usuário], eu quero [ação], para [benefício]"
+                required
               />
             </div>
 
@@ -148,6 +173,7 @@ export function ImprovementFormModal({ isOpen, onClose, improvement, services = 
                 onChange={(e) => setFormData({ ...formData, gherkin: e.target.value })}
                 rows={8}
                 className="w-full px-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary resize-none font-mono text-sm"
+                required
               />
             </div>
 
@@ -174,6 +200,9 @@ export function ImprovementFormModal({ isOpen, onClose, improvement, services = 
             </div>
           </div>
 
+          {error && (
+            <div className="text-red-500 text-sm mb-2">{error}</div>
+          )}
           <div className="flex items-center justify-end gap-3 pt-6 border-t border-border">
             <button
               type="button"

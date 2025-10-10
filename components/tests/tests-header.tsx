@@ -1,13 +1,22 @@
+
 "use client"
 
+import { useEffect, useState } from "react"
+
 import { Plus } from "lucide-react"
-import { useState } from "react"
 import { TestFormModal } from "./test-form-modal"
 import { ExcelActions } from "@/components/shared/excel-actions"
 import { formatDateForExcel, parseDateFromExcel } from "@/lib/excel-utils"
 
 export function TestsHeader() {
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [services, setServices] = useState([])
+  const [testCases, setTestCases] = useState([])
+
+  useEffect(() => {
+    fetch("/api/services").then(res => res.json()).then(setServices)
+    fetch("/api/test-cases").then(res => res.json()).then(setTestCases)
+  }, [])
 
   const handleExport = async () => {
     // Busca todos os testes
@@ -84,9 +93,8 @@ export function TestsHeader() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="text-3xl font-bold text-foreground">Testes</h1>
-              <p className="text-muted-foreground mt-1">Gerencie todos os testes executados</p>
+              <p className="text-muted-foreground mt-1">Gerencie testes e execuções</p>
             </div>
-
             <button
               onClick={() => setIsModalOpen(true)}
               className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2 font-medium"
@@ -95,12 +103,15 @@ export function TestsHeader() {
               Novo Teste
             </button>
           </div>
-
           <ExcelActions onExport={handleExport} onImport={handleImport} />
         </div>
       </div>
-
-      <TestFormModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <TestFormModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        services={services}
+        testCases={testCases}
+      />
     </>
   )
 }

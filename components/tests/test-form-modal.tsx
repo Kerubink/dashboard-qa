@@ -4,6 +4,7 @@ import type React from "react"
 
 import { X } from "lucide-react"
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import type { Test } from "@/lib/types"
 import { SearchableSelect } from "@/components/shared/searchable-select"
 
@@ -34,6 +35,8 @@ export function TestFormModal({ isOpen, onClose, test, bugs = [], services = [],
     service_id: "",
     test_case_id: "",
   })
+  const [error, setError] = useState("")
+  const router = useRouter()
 
   useEffect(() => {
     if (test) {
@@ -51,16 +54,37 @@ export function TestFormModal({ isOpen, onClose, test, bugs = [], services = [],
         evidence: test.evidence || "",
         responsible_qa: test.responsible_qa || "",
         responsible_dev: test.responsible_dev || "",
-        service_id: test.service_id?.toString() || "",
-        test_case_id: test.test_case_id?.toString() || "",
+        service_id: test.service_id ? String(test.service_id) : "",
+        test_case_id: test.test_case_id ? String(test.test_case_id) : "",
       })
     }
   }, [test])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("Saving test:", formData)
-    onClose()
+    setError("")
+    if (!formData.service_id) {
+      setError("Selecione um serviço antes de salvar.")
+      return
+    }
+    try {
+      const isEdit = !!test && test.id
+      const response = await fetch("/api/tests", {
+        method: isEdit ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...formData,
+          service_id: formData.service_id ? Number(formData.service_id) : null,
+          test_case_id: formData.test_case_id ? Number(formData.test_case_id) : null,
+          ...(isEdit ? { id: test.id } : {}),
+        }),
+      })
+      if (!response.ok) throw new Error(isEdit ? "Erro ao atualizar teste" : "Erro ao criar teste")
+      router.refresh()
+      onClose()
+    } catch (err) {
+      setError(test ? "Erro ao atualizar teste!" : "Erro ao criar teste!")
+    }
   }
 
   if (!isOpen) return null
@@ -190,11 +214,12 @@ export function TestFormModal({ isOpen, onClose, test, bugs = [], services = [],
 
             <div>
               <SearchableSelect
-                label="Serviço"
+                label="Serviço *"
                 options={services}
                 value={formData.service_id}
                 onChange={(value) => setFormData({ ...formData, service_id: value })}
                 placeholder="Buscar serviço..."
+                required
               />
             </div>
 
@@ -252,6 +277,9 @@ export function TestFormModal({ isOpen, onClose, test, bugs = [], services = [],
             </div>
           </div>
 
+          {error && (
+            <div className="text-red-500 text-sm mb-2">{error}</div>
+          )}
           <div className="flex items-center justify-end gap-3 pt-6 border-t border-border">
             <button
               type="button"
