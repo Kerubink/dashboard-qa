@@ -47,7 +47,7 @@ export async function getDashboardStats() {
       GROUP BY s.id
     )
     SELECT
-      (SELECT COUNT(*) FROM tests) as total_tests,
+      (SELECT COUNT(*) FROM tests WHERE result <> 'pendente') as total_tests,
       (SELECT COUNT(*) FROM bugs WHERE status IN ('open', 'in_progress')) as open_bugs,
       (SELECT COUNT(*) FROM test_cases) as total_test_cases,
       (SELECT COUNT(*) FROM services) as total_services,

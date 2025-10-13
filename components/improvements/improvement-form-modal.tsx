@@ -45,7 +45,7 @@ export function ImprovementFormModal({ isOpen, onClose, improvement, services = 
         status: improvement.status || "proposed",
         observations: improvement.observations || "",
         service_id: improvement.service_id ? String(improvement.service_id) : "",
-      })
+      });
     } else {
       setFormData({
         name: "",
@@ -56,9 +56,9 @@ export function ImprovementFormModal({ isOpen, onClose, improvement, services = 
         status: "proposed",
         observations: "",
         service_id: "",
-      })
+      });
     }
-  }, [improvement, isOpen])
+  }, [improvement, isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

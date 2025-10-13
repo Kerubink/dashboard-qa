@@ -48,7 +48,7 @@ export function TestCaseFormModal({ isOpen, onClose, testCase, services = [], ne
         is_automated: testCase.is_automated || false,
         observations: testCase.observations || "",
         service_id: testCase.service_id ? String(testCase.service_id) : "",
-      })
+      });
     } else {
       const ctNumber = String(nextId).padStart(4, "0")
       setFormData({
@@ -60,9 +60,9 @@ export function TestCaseFormModal({ isOpen, onClose, testCase, services = [], ne
         is_automated: false,
         observations: "",
         service_id: "",
-      })
+      });
     }
-  }, [testCase, isOpen, nextId])
+  }, [testCase, isOpen, nextId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

@@ -1,42 +1,57 @@
-"use client"
+"use client";
+
+import {
+  ResponsiveContainer,
+  Tooltip,
+  Legend,
+  Radar,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+} from "recharts";
 
 interface TestsFunnelChartProps {
-  data: { stage: string; value: number }[]
+  data: any[];
 }
 
 export function TestsFunnelChart({ data }: TestsFunnelChartProps) {
-  const maxValue = Math.max(...data.map((d) => d.value))
+  if (!data || data.length === 0) {
+    return (
+      <div className="bg-card border border-border rounded-lg p-6 flex items-center justify-center h-80">
+        <p className="text-muted-foreground">Dados do funil indisponíveis.</p>
+      </div>
+    );
+  }
+
+  // Transformar os dados para o formato do RadarChart
+  const radarData = data.map(item => ({
+    subject: item.stage,
+    value: item.value,
+    fullMark: Math.max(...data.map(d => d.value)) * 1.2, // 20% acima do maior valor
+  }));
 
   return (
     <div className="bg-card border border-border rounded-lg p-6">
-      <h3 className="text-lg font-semibold text-foreground mb-4">Funil de Qualidade</h3>
-
-      <div className="space-y-4 mt-6">
-        {data.map((item, index) => {
-          const percentage = (item.value / maxValue) * 100
-          const colors = ["#0070f3", "#7c3aed", "#10b981", "#ef4444"]
-
-          return (
-            <div key={item.stage} className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">{item.stage}</span>
-                <span className="text-foreground font-semibold">{item.value}</span>
-              </div>
-              <div className="relative h-12 bg-secondary rounded-lg overflow-hidden">
-                <div
-                  className="absolute inset-y-0 left-0 flex items-center justify-center text-white font-semibold transition-all duration-500"
-                  style={{
-                    width: `${percentage}%`,
-                    backgroundColor: colors[index % colors.length],
-                  }}
-                >
-                  {percentage > 20 && `${percentage.toFixed(0)}%`}
-                </div>
-              </div>
-            </div>
-          )
-        })}
-      </div>
+      <h3 className="text-lg font-semibold text-foreground mb-4">
+        Funil de Qualidade
+      </h3>
+      <ResponsiveContainer width="100%" height={300}>
+        <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
+          <PolarGrid />
+          <PolarAngleAxis dataKey="subject" />
+          <PolarRadiusAxis angle={30} domain={[0, 'auto']} />
+          <Radar 
+            name="Valores" 
+            dataKey="value" 
+            stroke="var(--color-chart-1)" 
+            fill="var(--color-chart-1)" 
+            fillOpacity={0.6} 
+          />
+          <Tooltip />
+          <Legend />
+        </RadarChart>
+      </ResponsiveContainer>
     </div>
-  )
+  );
 }
