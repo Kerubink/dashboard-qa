@@ -2,8 +2,9 @@
 
 import type React from "react"
 
-import { X } from "lucide-react"
+import { X, Trash2 } from "lucide-react"
 import { useState, useEffect } from "react"
+import useSWR from "swr"
 import { useRouter } from "next/navigation"
 import type { TestCase } from "@/lib/types"
 import { SearchableSelect } from "@/components/shared/searchable-select"
@@ -12,8 +13,6 @@ interface TestCaseFormModalProps {
   isOpen: boolean
   onClose: () => void
   testCase?: TestCase
-  services?: { id: number; name: string }[]
-  nextId?: number
 }
 
 const DEFAULT_GHERKIN = `Cenário: [Título do cenário]
@@ -23,8 +22,21 @@ const DEFAULT_GHERKIN = `Cenário: [Título do cenário]
   E [ação adicional]
   Então [resultado esperado]
   E [resultado adicional]`
-export function TestCaseFormModal({ isOpen, onClose, testCase, services = [], nextId = 1 }: TestCaseFormModalProps) {
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json())
+
+export function TestCaseFormModal({ isOpen, onClose, testCase }: TestCaseFormModalProps) {
+  const { data: servicesData } = useSWR<{ services: { id: number; name: string }[] }>(
+    isOpen ? "/api/services" : null,
+    fetcher
+  )
+  const { data: nextIdData } = useSWR<{ nextId: number }>(
+    isOpen && !testCase ? "/api/test-cases?nextId=true" : null,
+    fetcher
+  )
+
   const router = useRouter()
+  const [testCasePrefix, setTestCasePrefix] = useState("")
   const [formData, setFormData] = useState({
     name: "",
     user_story: "",
@@ -39,8 +51,10 @@ export function TestCaseFormModal({ isOpen, onClose, testCase, services = [], ne
 
   useEffect(() => {
     if (testCase) {
+      const [prefix, ...nameParts] = testCase.name.split(" - ")
+      setTestCasePrefix(prefix)
       setFormData({
-        name: testCase.name || "",
+        name: nameParts.join(" - ") || "",
         user_story: testCase.user_story || "",
         gherkin: testCase.gherkin || DEFAULT_GHERKIN,
         test_data: testCase.test_data || "",
@@ -48,11 +62,12 @@ export function TestCaseFormModal({ isOpen, onClose, testCase, services = [], ne
         is_automated: testCase.is_automated || false,
         observations: testCase.observations || "",
         service_id: testCase.service_id ? String(testCase.service_id) : "",
-      });
-    } else {
-      const ctNumber = String(nextId).padStart(4, "0")
+      })
+    } else if (nextIdData) {
+      const ctNumber = String(nextIdData.nextId).padStart(4, "0")
+      setTestCasePrefix(`CT${ctNumber}`)
       setFormData({
-        name: `CT${ctNumber} - `,
+        name: "",
         user_story: "",
         gherkin: DEFAULT_GHERKIN,
         test_data: "",
@@ -60,9 +75,9 @@ export function TestCaseFormModal({ isOpen, onClose, testCase, services = [], ne
         is_automated: false,
         observations: "",
         service_id: "",
-      });
+      })
     }
-  }, [testCase, isOpen, nextId]);
+  }, [testCase, isOpen, nextIdData])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -77,7 +92,8 @@ export function TestCaseFormModal({ isOpen, onClose, testCase, services = [], ne
         method: isEdit ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...formData,
+          ...formData, // Spread the rest of the form data
+          name: `${testCasePrefix} - ${formData.name}`, // Combine prefix and name
           service_id: formData.service_id ? Number(formData.service_id) : null,
           ...(isEdit ? { id: testCase.id } : {}),
         }),
@@ -87,6 +103,26 @@ export function TestCaseFormModal({ isOpen, onClose, testCase, services = [], ne
       onClose()
     } catch (err) {
       setError(testCase ? "Erro ao atualizar caso de teste!" : "Erro ao criar caso de teste!")
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!testCase || !testCase.id) return
+
+    if (window.confirm("Tem certeza que deseja deletar este caso de teste? Esta ação não pode ser desfeita.")) {
+      setError("")
+      try {
+        const response = await fetch("/api/test-cases", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: testCase.id }),
+        })
+        if (!response.ok) throw new Error("Erro ao deletar caso de teste")
+        router.refresh()
+        onClose()
+      } catch (err) {
+        setError("Erro ao deletar o caso de teste!")
+      }
     }
   }
 
@@ -109,6 +145,24 @@ export function TestCaseFormModal({ isOpen, onClose, testCase, services = [], ne
 
         <form onSubmit={handleSubmit} className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-foreground mb-2">Nome do Caso de Teste *</label>
+              <div className="flex items-center">
+                <span className="px-2 py-2 w-36 bg-secondary border border-r-0 border-border rounded-l-lg text-muted-foreground font-mono">
+                  {testCasePrefix} -
+                </span>
+                <input
+                  type="text"
+                  required
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full px-4 py-2 bg-secondary text-foreground rounded-r-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder="Validar login com sucesso"
+                  disabled={!testCasePrefix}
+                />
+              </div>
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">Status *</label>
               <select
@@ -125,8 +179,8 @@ export function TestCaseFormModal({ isOpen, onClose, testCase, services = [], ne
 
             <div>
               <SearchableSelect
-                label="Serviço *"
-                options={services}
+                label="Serviço "
+                options={servicesData?.services || []}
                 value={formData.service_id}
                 onChange={(value) => setFormData({ ...formData, service_id: value })}
                 placeholder="Buscar serviço..."
@@ -208,6 +262,15 @@ export function TestCaseFormModal({ isOpen, onClose, testCase, services = [], ne
             >
               Cancelar
             </button>
+            {testCase && (
+              <button
+                type="button"
+                onClick={handleDelete}
+                className="px-4 py-2 bg-red-600/10 text-red-500 rounded-lg hover:bg-red-600/20 transition-colors flex items-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" /> Deletar
+              </button>
+            )}
             <button
               type="submit"
               className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium"

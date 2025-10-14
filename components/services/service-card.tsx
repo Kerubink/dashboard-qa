@@ -12,14 +12,15 @@ interface ServiceCardProps {
     passed_tests: string
     total_bugs: string
     open_bugs: string
-    total_test_cases: string
+    total_test_cases: string,
+    executed_test_cases: string
   }
 }
 
 export function ServiceCard({ service }: ServiceCardProps) {
-  const totalTests = Number.parseInt(service.total_tests || "0")
-  const passedTests = Number.parseInt(service.passed_tests || "0")
-  const coverage = totalTests > 0 ? Math.round((passedTests / totalTests) * 100) : 0
+  const totalTestCases = Number.parseInt(service.total_test_cases || "0")
+  const executedTestCases = Number.parseInt(service.executed_test_cases || "0")
+  const coverage = totalTestCases > 0 ? Math.round((executedTestCases / totalTestCases) * 100) : 0
 
   return (
     <Link href={`/services/${service.id}`}>

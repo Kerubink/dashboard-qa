@@ -1,9 +1,9 @@
 "use client"
 
 import type React from "react"
-
-import { X } from "lucide-react"
+import { X, Trash2 } from "lucide-react"
 import { useState, useEffect } from "react"
+import useSWR from "swr"
 import { useRouter } from "next/navigation"
 import type { Test } from "@/lib/types"
 import { SearchableSelect } from "@/components/shared/searchable-select"
@@ -12,61 +12,56 @@ interface TestFormModalProps {
   isOpen: boolean
   onClose: () => void
   test?: Test
-  bugs?: { id: number; name: string }[]
-  services?: { id: number; name: string }[]
-  testCases?: { id: number; name: string }[]
 }
 
-export function TestFormModal({ isOpen, onClose, test, bugs = [], services = [], testCases = [] }: TestFormModalProps) {
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
+export function TestFormModal({ isOpen, onClose, test }: TestFormModalProps) {
+  const { data: testCasesData } = useSWR<{ testCases: { id: number; name: string }[] }>(
+    isOpen ? "/api/test-cases?format=list" : null,
+    fetcher
+  );
+
+  const router = useRouter()
   const [formData, setFormData] = useState({
     name: "",
     description: "",
+    result: "pendente",
     type: "funcional",
-    result: "pending",
-    execution_type: "manual",
-    execution_location: "",
-    execution_method: "",
-    test_data: "",
-    jira_link: "",
-    bug_link: "",
-    evidence: "",
-    responsible_qa: "",
-    responsible_dev: "",
-    service_id: "",
     test_case_id: "",
   })
   const [error, setError] = useState("")
-  const router = useRouter()
 
   useEffect(() => {
     if (test) {
       setFormData({
         name: test.name || "",
         description: test.description || "",
+        result: test.result || "pendente",
         type: test.type || "funcional",
-        result: test.result || "pending",
-        execution_type: test.execution_type || "manual",
-        execution_location: test.execution_location || "",
-        execution_method: test.execution_method || "",
-        test_data: test.test_data || "",
-        jira_link: test.jira_link || "",
-        bug_link: test.bug_link || "",
-        evidence: test.evidence || "",
-        responsible_qa: test.responsible_qa || "",
-        responsible_dev: test.responsible_dev || "",
-        service_id: test.service_id ? String(test.service_id) : "",
         test_case_id: test.test_case_id ? String(test.test_case_id) : "",
       })
+    } else {
+      setFormData({
+        name: "",
+        description: "",
+        result: "pendente",
+        type: "funcional",
+        test_case_id: "",
+      })
     }
-  }, [test])
+    setError("")
+  }, [test, isOpen])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
-    if (!formData.service_id) {
-      setError("Selecione um serviço antes de salvar.")
+
+    if (!formData.test_case_id) {
+      setError("Selecione um Caso de Teste antes de salvar.")
       return
     }
+
     try {
       const isEdit = !!test && test.id
       const response = await fetch("/api/tests", {
@@ -74,7 +69,6 @@ export function TestFormModal({ isOpen, onClose, test, bugs = [], services = [],
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
-          service_id: formData.service_id ? Number(formData.service_id) : null,
           test_case_id: formData.test_case_id ? Number(formData.test_case_id) : null,
           ...(isEdit ? { id: test.id } : {}),
         }),
@@ -83,7 +77,27 @@ export function TestFormModal({ isOpen, onClose, test, bugs = [], services = [],
       router.refresh()
       onClose()
     } catch (err) {
-      setError(test ? "Erro ao atualizar teste!" : "Erro ao criar teste!")
+      setError(test ? "Erro ao atualizar o teste!" : "Erro ao criar o teste!")
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!test || !test.id) return
+
+    if (window.confirm("Tem certeza que deseja deletar este teste? Esta ação não pode ser desfeita.")) {
+      setError("")
+      try {
+        const response = await fetch("/api/tests", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: test.id }),
+        })
+        if (!response.ok) throw new Error("Erro ao deletar teste")
+        router.refresh()
+        onClose()
+      } catch (err) {
+        setError("Erro ao deletar o teste!")
+      }
     }
   }
 
@@ -120,159 +134,39 @@ export function TestFormModal({ isOpen, onClose, test, bugs = [], services = [],
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 rows={3}
                 className="w-full px-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-                placeholder="Descreva o objetivo e escopo do teste..."
+                placeholder="Descreva o objetivo do teste..."
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Tipo de Teste *</label>
-              <select
-                required
-                value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                className="w-full px-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                <option value="unitario">Unitário</option>
+              <label className="block text-sm font-medium text-foreground mb-2">Tipo *</label>
+              <select value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value })} className="w-full px-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary">
                 <option value="funcional">Funcional</option>
-                <option value="performance">Performance</option>
-                <option value="contrato">Contrato</option>
+                <option value="integracao">Integração</option>
                 <option value="regressao">Regressão</option>
-                <option value="exploratorio">Exploratório</option>
+                <option value="unidade">Unidade</option>
+                <option value="e2e">E2E</option>
               </select>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">Resultado *</label>
-              <select
-                required
-                value={formData.result}
-                onChange={(e) => setFormData({ ...formData, result: e.target.value })}
-                className="w-full px-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                <option value="pending">Pendente</option>
+              <select value={formData.result} onChange={(e) => setFormData({ ...formData, result: e.target.value })} className="w-full px-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary">
+                <option value="pendente">Pendente</option>
                 <option value="aprovado">Aprovado</option>
-                <option value="falho">Falho</option>
-                <option value="quebrado">Quebrado</option>
+                <option value="reprovado">Reprovado</option>
+                <option value="bloqueado">Bloqueado</option>
               </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Tipo de Execução</label>
-              <select
-                value={formData.execution_type}
-                onChange={(e) => setFormData({ ...formData, execution_type: e.target.value })}
-                className="w-full px-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                <option value="manual">Manual</option>
-                <option value="automatico">Automático</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Onde foi Executado</label>
-              <input
-                type="text"
-                value={formData.execution_location}
-                onChange={(e) => setFormData({ ...formData, execution_location: e.target.value })}
-                className="w-full px-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="Ex: Ambiente de homologação"
-              />
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-foreground mb-2">Como foi Executado</label>
-              <input
-                type="text"
-                value={formData.execution_method}
-                onChange={(e) => setFormData({ ...formData, execution_method: e.target.value })}
-                className="w-full px-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="Ex: Cypress, Postman, Manual via navegador"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Responsável QA</label>
-              <input
-                type="text"
-                value={formData.responsible_qa}
-                onChange={(e) => setFormData({ ...formData, responsible_qa: e.target.value })}
-                className="w-full px-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="Nome do QA"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Responsável Dev</label>
-              <input
-                type="text"
-                value={formData.responsible_dev}
-                onChange={(e) => setFormData({ ...formData, responsible_dev: e.target.value })}
-                className="w-full px-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="Nome do Dev"
-              />
-            </div>
-
-            <div>
               <SearchableSelect
-                label="Serviço *"
-                options={services}
-                value={formData.service_id}
-                onChange={(value) => setFormData({ ...formData, service_id: value })}
-                placeholder="Buscar serviço..."
-                required
-              />
-            </div>
-
-            <div>
-              <SearchableSelect
-                label="Caso de Teste"
-                options={testCases}
+                label="Caso de Teste Relacionado *"
+                options={testCasesData?.testCases || []}
                 value={formData.test_case_id}
                 onChange={(value) => setFormData({ ...formData, test_case_id: value })}
                 placeholder="Buscar caso de teste..."
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Link do Jira</label>
-              <input
-                type="url"
-                value={formData.jira_link}
-                onChange={(e) => setFormData({ ...formData, jira_link: e.target.value })}
-                className="w-full px-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="https://..."
-              />
-            </div>
-
-            <div>
-              <SearchableSelect
-                label="Bug Relacionado"
-                options={bugs}
-                value={formData.bug_link}
-                onChange={(value) => setFormData({ ...formData, bug_link: value })}
-                placeholder="Buscar bug..."
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-foreground mb-2">Massa de Dados</label>
-              <textarea
-                value={formData.test_data}
-                onChange={(e) => setFormData({ ...formData, test_data: e.target.value })}
-                rows={3}
-                className="w-full px-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-                placeholder="Dados utilizados no teste..."
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-foreground mb-2">Evidências (opcional)</label>
-              <textarea
-                value={formData.evidence}
-                onChange={(e) => setFormData({ ...formData, evidence: e.target.value })}
-                rows={2}
-                className="w-full px-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-                placeholder="Links para screenshots, vídeos, logs..."
+                required
               />
             </div>
           </div>
@@ -288,6 +182,15 @@ export function TestFormModal({ isOpen, onClose, test, bugs = [], services = [],
             >
               Cancelar
             </button>
+            {test && (
+              <button
+                type="button"
+                onClick={handleDelete}
+                className="px-4 py-2 bg-red-600/10 text-red-500 rounded-lg hover:bg-red-600/20 transition-colors flex items-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" /> Deletar
+              </button>
+            )}
             <button
               type="submit"
               className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium"

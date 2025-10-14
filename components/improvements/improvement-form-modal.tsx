@@ -1,8 +1,9 @@
 "use client"
 
 import type React from "react"
-import { X } from "lucide-react"
+import { X, Trash2 } from "lucide-react"
 import { useState, useEffect } from "react"
+import useSWR from "swr"
 import { useRouter } from "next/navigation"
 import type { Improvement } from "@/lib/types"
 import { SearchableSelect } from "@/components/shared/searchable-select"
@@ -11,22 +12,21 @@ interface ImprovementFormModalProps {
   isOpen: boolean
   onClose: () => void
   improvement?: Improvement
-  services?: { id: number; name: string }[]
 }
 
-const DEFAULT_GHERKIN = `Cenário: [Título da melhoria]
-  Dado que [situação atual]
-  Quando [melhoria for implementada]
-  Então [resultado esperado]
-  E [benefício adicional]`
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-export function ImprovementFormModal({ isOpen, onClose, improvement, services = [] }: ImprovementFormModalProps) {
+export function ImprovementFormModal({ isOpen, onClose, improvement }: ImprovementFormModalProps) {
+  const { data: servicesData } = useSWR<{ services: { id: number; name: string }[] }>(
+    isOpen ? "/api/services" : null,
+    fetcher
+  );
+
   const router = useRouter()
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     user_story: "",
-    gherkin: DEFAULT_GHERKIN,
     evidence: "",
     status: "proposed",
     observations: "",
@@ -40,7 +40,6 @@ export function ImprovementFormModal({ isOpen, onClose, improvement, services = 
         name: improvement.name || "",
         description: improvement.description || "",
         user_story: improvement.user_story || "",
-        gherkin: DEFAULT_GHERKIN,
         evidence: improvement.evidence || "",
         status: improvement.status || "proposed",
         observations: improvement.observations || "",
@@ -51,7 +50,6 @@ export function ImprovementFormModal({ isOpen, onClose, improvement, services = 
         name: "",
         description: "",
         user_story: "",
-        gherkin: DEFAULT_GHERKIN,
         evidence: "",
         status: "proposed",
         observations: "",
@@ -83,6 +81,26 @@ export function ImprovementFormModal({ isOpen, onClose, improvement, services = 
       onClose()
     } catch (err) {
       setError(improvement ? "Erro ao atualizar melhoria!" : "Erro ao criar melhoria!")
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!improvement || !improvement.id) return
+
+    if (window.confirm("Tem certeza que deseja deletar esta melhoria? Esta ação não pode ser desfeita.")) {
+      setError("")
+      try {
+        const response = await fetch("/api/improvements", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: improvement.id }),
+        })
+        if (!response.ok) throw new Error("Erro ao deletar melhoria")
+        router.refresh()
+        onClose()
+      } catch (err) {
+        setError("Erro ao deletar a melhoria!")
+      }
     }
   }
 
@@ -143,7 +161,7 @@ export function ImprovementFormModal({ isOpen, onClose, improvement, services = 
             <div>
               <SearchableSelect
                 label="Serviço *"
-                options={services}
+                options={servicesData?.services || []}
                 value={formData.service_id}
                 onChange={(value) => setFormData({ ...formData, service_id: value })}
                 placeholder="Buscar serviço..."
@@ -159,20 +177,6 @@ export function ImprovementFormModal({ isOpen, onClose, improvement, services = 
                 rows={3}
                 className="w-full px-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary resize-none"
                 placeholder="Como [usuário], eu quero [ação], para [benefício]"
-                required
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Cenário da Melhoria (Gherkin)
-                <span className="text-xs text-muted-foreground ml-2">(Template pré-preenchido para edição)</span>
-              </label>
-              <textarea
-                value={formData.gherkin}
-                onChange={(e) => setFormData({ ...formData, gherkin: e.target.value })}
-                rows={8}
-                className="w-full px-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary resize-none font-mono text-sm"
                 required
               />
             </div>
@@ -211,6 +215,15 @@ export function ImprovementFormModal({ isOpen, onClose, improvement, services = 
             >
               Cancelar
             </button>
+            {improvement && (
+              <button
+                type="button"
+                onClick={handleDelete}
+                className="px-4 py-2 bg-red-600/10 text-red-500 rounded-lg hover:bg-red-600/20 transition-colors flex items-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" /> Deletar
+              </button>
+            )}
             <button
               type="submit"
               className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium"

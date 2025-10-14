@@ -1,19 +1,27 @@
 "use client"
 
 import type React from "react"
-import { X } from "lucide-react"
+import { X, Trash2 } from "lucide-react"
 import { useState, useEffect } from "react"
+import useSWR from "swr"
 import { useRouter } from "next/navigation"
 import type { PerformancePlan } from "@/lib/types"
+import { SearchableSelect } from "@/components/shared/searchable-select"
 
 interface PerformancePlanFormModalProps {
   isOpen: boolean
   onClose: () => void
   plan?: PerformancePlan
-  services?: { id: number; name: string }[]
 }
 
-export function PerformancePlanFormModal({ isOpen, onClose, plan, services = [] }: PerformancePlanFormModalProps) {
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
+export function PerformancePlanFormModal({ isOpen, onClose, plan }: PerformancePlanFormModalProps) {
+  const { data: servicesData } = useSWR<{ services: { id: number; name: string }[] }>(
+    isOpen ? "/api/services" : null,
+    fetcher
+  );
+
   const router = useRouter()
   const [formData, setFormData] = useState({
     name: "",
@@ -67,6 +75,26 @@ export function PerformancePlanFormModal({ isOpen, onClose, plan, services = [] 
       onClose()
     } catch (err) {
       setError(plan ? "Erro ao atualizar plano de performance!" : "Erro ao criar plano de performance!")
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!plan || !plan.id) return
+
+    if (window.confirm("Tem certeza que deseja deletar este plano? Esta ação não pode ser desfeita.")) {
+      setError("")
+      try {
+        const response = await fetch("/api/performance", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: plan.id }),
+        })
+        if (!response.ok) throw new Error("Erro ao deletar plano")
+        router.refresh()
+        onClose()
+      } catch (err) {
+        setError("Erro ao deletar o plano!")
+      }
     }
   }
 
@@ -180,18 +208,14 @@ export function PerformancePlanFormModal({ isOpen, onClose, plan, services = [] 
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Serviço *</label>
-              <select
-                required
+              <SearchableSelect
+                label="Serviço *"
+                options={servicesData?.services || []}
                 value={formData.service_id}
-                onChange={(e) => setFormData({ ...formData, service_id: e.target.value })}
-                className="w-full px-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                <option value="">Selecione o serviço</option>
-                {services.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
+                onChange={(value) => setFormData({ ...formData, service_id: value })}
+                placeholder="Buscar serviço..."
+                required
+              />
             </div>
           </div>
 
@@ -206,6 +230,15 @@ export function PerformancePlanFormModal({ isOpen, onClose, plan, services = [] 
             >
               Cancelar
             </button>
+            {plan && (
+              <button
+                type="button"
+                onClick={handleDelete}
+                className="px-4 py-2 bg-red-600/10 text-red-500 rounded-lg hover:bg-red-600/20 transition-colors flex items-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" /> Deletar
+              </button>
+            )}
             <button
               type="submit"
               className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium"

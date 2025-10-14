@@ -9,6 +9,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@vercel/postgres": "^0.9.0",
     "pg": "8.12.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -24,7 +25,8 @@
     "tailwindcss-animate": "^1.0.7",
     "tw-animate-css": "latest",
     "xlsx": "latest",
-    "react-is": "latest"
+    "react-is": "latest",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/node": "^22",

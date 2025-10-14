@@ -3,7 +3,7 @@ import {
   getDashboardStats,
   getTestsByType,
   getTestsByResult,
-  getCoverageByService,
+  getTestsStatusByService, // Alterado de getCoverageByService
   getFunnelData,
   getRecentActivities,
   getAlerts,
@@ -15,7 +15,7 @@ export async function GET() {
       stats,
       testsByType,
       testsByResult,
-      coverageByService,
+      coverageByService, // Mantido para não quebrar outras partes, mas agora é o novo formato
       funnelData,
       recentActivities,
       alerts,
@@ -23,13 +23,21 @@ export async function GET() {
       getDashboardStats(),
       getTestsByType(),
       getTestsByResult(),
-      getCoverageByService(),
+      getTestsStatusByService(), // Usando a nova função
       getFunnelData(),
       getRecentActivities(),
       getAlerts(),
     ])
 
-    return NextResponse.json({ stats, testsByType, testsByResult, coverageByService, funnelData, recentActivities, alerts })
+    return NextResponse.json({
+      stats,
+      testsByType,
+      testsByResult,
+      coverageByService,
+      funnelData,
+      recentActivities,
+      alerts,
+    })
   } catch (error) {
     console.error("Erro no endpoint /api/dashboard:", error)
     return NextResponse.json({ error: "Erro ao buscar dados do dashboard" }, { status: 500 })

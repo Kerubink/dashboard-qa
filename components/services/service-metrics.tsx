@@ -129,12 +129,13 @@ async function getServiceMetrics(serviceId: string) {
       query(
         `
       SELECT 
-        COUNT(*) as total,
-        COUNT(CASE WHEN result = 'aprovado' THEN 1 END) as passed,
-        COUNT(CASE WHEN result = 'falho' THEN 1 END) as failed,
-        COUNT(CASE WHEN result = 'quebrado' THEN 1 END) as broken
-      FROM tests
-      WHERE service_id = $1
+        COUNT(t.id) as total,
+        COUNT(CASE WHEN t.result = 'aprovado' THEN 1 END) as passed,
+        COUNT(CASE WHEN t.result = 'reprovado' THEN 1 END) as failed,
+        COUNT(CASE WHEN t.result = 'bloqueado' THEN 1 END) as broken
+      FROM tests t
+      JOIN test_cases tc ON t.test_case_id = tc.id
+      WHERE tc.service_id = $1
     `,
         [serviceId],
       ),
@@ -149,7 +150,11 @@ async function getServiceMetrics(serviceId: string) {
     const openBugs = Number.parseInt(bugsResult.rows[0]?.count || "0")
     const totalTestCases = Number.parseInt(testCasesResult.rows[0]?.count || "0")
 
-    const coverage = totalTestCases > 0 ? Math.round((passedTests / totalTestCases) * 100) : 0
+    // Cobertura: (testes executados / total de casos de teste) * 100
+    // Garante que a cobertura reflita quantos casos de teste têm pelo menos um teste executado.
+    const executedTestCasesResult = await query("SELECT COUNT(DISTINCT test_case_id) as count FROM tests t JOIN test_cases tc ON t.test_case_id = tc.id WHERE tc.service_id = $1", [serviceId]);
+    const executedTestCasesCount = Number.parseInt(executedTestCasesResult.rows[0]?.count || "0");
+    const coverage = totalTestCases > 0 ? Math.round((executedTestCasesCount / totalTestCases) * 100) : 0
 
     return {
       totalTests,

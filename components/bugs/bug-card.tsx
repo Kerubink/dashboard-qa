@@ -68,33 +68,31 @@ export function BugCard({ bug }: BugCardProps) {
               )}
             </div>
 
-            {bug.user_story && (
-              <div className="mt-4 p-3 bg-secondary rounded-lg">
-                <p className="text-xs font-medium text-muted-foreground mb-1">User Story</p>
-                <p className="text-sm text-foreground line-clamp-2">{bug.user_story}</p>
-              </div>
-            )}
+            <div className="mt-4 p-3 bg-secondary rounded-lg">
+              <p className="text-xs font-medium text-muted-foreground mb-1">User Story</p>
+              <p className="text-sm text-foreground line-clamp-2">
+                {bug.user_story || <span className="italic text-muted-foreground/70">Não informado</span>}
+              </p>
+            </div>
 
-            {bug.gherkin && (
-              <div className="mt-3 p-3 bg-secondary rounded-lg">
-                <p className="text-xs font-medium text-muted-foreground mb-1">Caso de Teste (Gherkin)</p>
-                <pre className="text-xs text-foreground font-mono line-clamp-3 whitespace-pre-wrap">{bug.gherkin}</pre>
-              </div>
-            )}
+            <div className="mt-3 p-3 bg-secondary rounded-lg">
+              <p className="text-xs font-medium text-muted-foreground mb-1">Caso de Teste (Gherkin)</p>
+              <pre className="text-xs text-foreground font-mono line-clamp-3 whitespace-pre-wrap">
+                {bug.gherkin || <span className="italic text-muted-foreground/70">Não informado</span>}
+              </pre>
+            </div>
 
-            {bug.evidence && (
-              <div className="mt-3">
-                <a
-                  href={bug.evidence}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-xs text-primary hover:underline"
-                >
-                  <ExternalLink className="w-3 h-3" />
-                  Ver Evidências
-                </a>
-              </div>
-            )}
+            <div className="mt-3">
+              <a
+                href={bug.evidence || "#"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`flex items-center gap-1 text-xs ${bug.evidence ? "text-primary hover:underline" : "text-muted-foreground/50 cursor-not-allowed"}`}
+              >
+                <ExternalLink className="w-3 h-3" />
+                {bug.evidence ? "Ver Evidências" : "Sem Evidências"}
+              </a>
+            </div>
           </div>
 
           <button

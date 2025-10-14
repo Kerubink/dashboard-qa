@@ -99,6 +99,49 @@ export async function getTestsByResult() {
   }));
 }
 
+export async function getTestsStatusByService() {
+  const result = await query(`
+    SELECT
+      s.name as service,
+      t.result as status,
+      COUNT(t.id) as count
+    FROM tests t
+    JOIN test_cases tc ON t.test_case_id = tc.id
+    JOIN services s ON tc.service_id = s.id
+    WHERE t.result IS NOT NULL AND TRIM(t.result) <> ''
+    GROUP BY s.name, t.result
+    ORDER BY s.name, t.result;
+  `);
+
+  if (result.rows.length === 0) {
+    return { data: [], services: [] };
+  }
+
+  const services = [...new Set(result.rows.map((row: any) => row.service))];
+  const statuses = [...new Set(result.rows.map((row: any) => row.status))];
+
+  const pivotedData = statuses.map(status => {
+    const row: { status: string; [service: string]: number | string } = { status };
+
+    services.forEach(service => {
+      row[service] = 0;
+    });
+
+    result.rows
+      .filter((r: any) => r.status === status)
+      .forEach((r: any) => {
+        row[r.service] = parseInt(r.count, 10);
+      });
+
+    return row;
+  });
+
+  return {
+    data: pivotedData,
+    services: services,
+  };
+}
+
 export async function getCoverageByService() {
   const result = await query(`
     SELECT
@@ -245,4 +288,20 @@ export async function getAllServicesForSelect() {
 export async function getAllTestsForSelect() {
   const result = await query('SELECT id, name FROM tests WHERE name IS NOT NULL ORDER BY name');
   return result.rows;
+}
+
+export async function getTestCases() {
+  const result = await query(`
+    SELECT 
+      tc.*,
+      s.name as service_name
+    FROM test_cases tc
+    JOIN services s ON tc.service_id = s.id
+    ORDER BY tc.id DESC
+  `);
+  return result.rows.map((row: any) => ({
+    ...row,
+    id: Number(row.id),
+    service_id: Number(row.service_id),
+  }));
 }

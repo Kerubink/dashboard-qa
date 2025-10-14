@@ -1,18 +1,13 @@
 "use client"
 
 import { Plus } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { PerformancePlanFormModal } from "./performance-plan-form-modal"
 import { ExcelActions } from "@/components/shared/excel-actions"
 import { formatDateForExcel, parseDateFromExcel } from "@/lib/excel-utils"
 
 export function PerformanceHeader() {
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [services, setServices] = useState([])
-
-  useEffect(() => {
-    fetch("/api/services").then(res => res.json()).then(setServices)
-  }, [])
 
   const handleExport = async () => {
     const response = await fetch("/api/performance")
@@ -98,7 +93,7 @@ export function PerformanceHeader() {
         </div>
       </div>
 
-  <PerformancePlanFormModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} services={services} />
+  <PerformancePlanFormModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </>
   )
 }

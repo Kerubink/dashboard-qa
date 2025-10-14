@@ -12,7 +12,7 @@ interface MetricsGridProps {
 export function MetricsGrid({ metrics }: MetricsGridProps) {
   const cards = [
     {
-      title: "Testes Executados",
+      title: "Total de testes",
       value: metrics.totalTests,
       icon: FlaskConical,
       color: "text-chart-1",

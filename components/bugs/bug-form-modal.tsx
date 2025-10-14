@@ -1,9 +1,10 @@
 "use client"
 
 import type React from "react"
-import { X } from "lucide-react"
+import { X, Trash2 } from "lucide-react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import useSWR from "swr"
 import type { Bug } from "@/lib/types"
 import { SearchableSelect } from "@/components/shared/searchable-select"
 
@@ -11,8 +12,6 @@ interface BugFormModalProps {
   isOpen: boolean
   onClose: () => void
   bug?: Bug
-  tests?: { id: number; name: string }[]
-  services?: { id: number; name: string }[]
 }
 
 const DEFAULT_GHERKIN = `Cenário: [Título do cenário]
@@ -21,7 +20,18 @@ const DEFAULT_GHERKIN = `Cenário: [Título do cenário]
   Então [resultado esperado]
   E [condição adicional]`
 
-export function BugFormModal({ isOpen, onClose, bug, tests = [], services = [] }: BugFormModalProps) {
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
+export function BugFormModal({ isOpen, onClose, bug }: BugFormModalProps) {
+  const { data: servicesData } = useSWR<{ services: { id: number; name: string }[] }>(
+    isOpen ? "/api/services" : null,
+    fetcher
+  );
+  const { data: testsData } = useSWR<{ tests: { id: number; name: string }[] }>(
+    isOpen ? "/api/tests?format=list" : null,
+    fetcher
+  );
+
   const router = useRouter()
   const [formData, setFormData] = useState({
     name: "",
@@ -37,7 +47,6 @@ export function BugFormModal({ isOpen, onClose, bug, tests = [], services = [] }
     test_id: "",
     responsible_qa: "",
     responsible_dev: "",
-    evidence_link: "",
   })
   const [error, setError] = useState("")
 
@@ -57,7 +66,6 @@ export function BugFormModal({ isOpen, onClose, bug, tests = [], services = [] }
         test_id: bug.test_id !== null && bug.test_id !== undefined ? String(bug.test_id) : "",
         responsible_qa: bug.responsible_qa || "",
         responsible_dev: bug.responsible_dev || "",
-        evidence_link: bug.evidence_link || "",
       })
     } else {
       setFormData({
@@ -74,24 +82,16 @@ export function BugFormModal({ isOpen, onClose, bug, tests = [], services = [] }
         test_id: "",
         responsible_qa: "",
         responsible_dev: "",
-        evidence_link: "",
       })
     }
     setError("")
   }, [bug, isOpen])
 
-  useEffect(() => {
-    console.log("Dados recebidos para testes:", tests);
-    console.log("Dados recebidos para serviços:", services);
-    console.log("Estado inicial do formulário:", formData);
-  }, [tests, services, formData]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
-    // Validação de obrigatoriedade de todos os campos (exceto evidence_link)
-    if (!formData.name || !formData.description || !formData.user_story || !formData.gherkin || !formData.evidence || !formData.status || !formData.criticality || !formData.risk || !formData.observations || !formData.service_id || !formData.test_id || !formData.responsible_qa || !formData.responsible_dev) {
-      setError("Preencha todos os campos obrigatórios antes de salvar.")
+    if (!formData.service_id || !formData.test_id) {
+      setError("Os campos 'Serviço' e 'Teste Relacionado' são obrigatórios.")
       return
     }
     try {
@@ -111,6 +111,26 @@ export function BugFormModal({ isOpen, onClose, bug, tests = [], services = [] }
       onClose()
     } catch (err) {
       setError(bug ? "Erro ao atualizar bug!" : "Erro ao criar bug!")
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!bug || !bug.id) return
+
+    if (window.confirm("Tem certeza que deseja deletar este bug? Esta ação não pode ser desfeita.")) {
+      setError("")
+      try {
+        const response = await fetch("/api/bugs", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: bug.id }),
+        })
+        if (!response.ok) throw new Error("Erro ao deletar bug")
+        router.refresh()
+        onClose()
+      } catch (err) {
+        setError("Erro ao deletar o bug!")
+      }
     }
   }
 
@@ -199,7 +219,7 @@ export function BugFormModal({ isOpen, onClose, bug, tests = [], services = [] }
             <div>
               <SearchableSelect
                 label="Teste Relacionado *"
-                options={tests}
+                options={testsData?.tests || []}
                 value={formData.test_id}
                 onChange={(value) => setFormData({ ...formData, test_id: value })}
                 placeholder="Buscar teste..."
@@ -210,7 +230,7 @@ export function BugFormModal({ isOpen, onClose, bug, tests = [], services = [] }
             <div className="md:col-span-2">
               <SearchableSelect
                 label="Serviço *"
-                options={services}
+                options={servicesData?.services || []}
                 value={formData.service_id}
                 onChange={(value) => setFormData({ ...formData, service_id: value })}
                 placeholder="Buscar serviço..."
@@ -272,16 +292,6 @@ export function BugFormModal({ isOpen, onClose, bug, tests = [], services = [] }
                 placeholder="Descreva as evidências, links, prints, logs, etc."
               />
             </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-foreground mb-2">Link de Evidência (opcional)</label>
-              <input
-                type="url"
-                value={formData.evidence_link}
-                onChange={(e) => setFormData({ ...formData, evidence_link: e.target.value })}
-                className="w-full px-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="Link para screenshots, vídeos, logs..."
-              />
-            </div>
 
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-foreground mb-2">Observações</label>
@@ -306,6 +316,15 @@ export function BugFormModal({ isOpen, onClose, bug, tests = [], services = [] }
             >
               Cancelar
             </button>
+            {bug && (
+              <button
+                type="button"
+                onClick={handleDelete}
+                className="px-4 py-2 bg-red-600/10 text-red-500 rounded-lg hover:bg-red-600/20 transition-colors flex items-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" /> Deletar
+              </button>
+            )}
             <button
               type="submit"
               className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium"

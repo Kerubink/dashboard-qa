@@ -27,15 +27,16 @@ async function getServicesWithMetrics() {
     const result = await query(`
       SELECT 
         s.*,
-        COUNT(DISTINCT t.id) as total_tests,
-        COUNT(DISTINCT CASE WHEN t.result = 'aprovado' THEN t.id END) as passed_tests,
+        COUNT(DISTINCT t.id) FILTER (WHERE t.id IS NOT NULL) as total_tests,
+        COUNT(DISTINCT t.id) FILTER (WHERE t.result = 'aprovado') as passed_tests,
         COUNT(DISTINCT b.id) as total_bugs,
         COUNT(DISTINCT CASE WHEN b.status = 'open' THEN b.id END) as open_bugs,
-        COUNT(DISTINCT tc.id) as total_test_cases
+        COUNT(DISTINCT tc.id) as total_test_cases,
+        COUNT(DISTINCT t.test_case_id) as executed_test_cases
       FROM services s
-      LEFT JOIN tests t ON t.service_id = s.id
-      LEFT JOIN bugs b ON b.service_id = s.id
       LEFT JOIN test_cases tc ON tc.service_id = s.id
+      LEFT JOIN tests t ON t.test_case_id = tc.id
+      LEFT JOIN bugs b ON b.service_id = s.id
       GROUP BY s.id
       ORDER BY s.name
     `)

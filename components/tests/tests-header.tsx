@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 
 import { Plus } from "lucide-react"
 import { TestFormModal } from "./test-form-modal"
@@ -10,13 +10,6 @@ import { formatDateForExcel, parseDateFromExcel } from "@/lib/excel-utils"
 
 export function TestsHeader() {
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [services, setServices] = useState([])
-  const [testCases, setTestCases] = useState([])
-
-  useEffect(() => {
-    fetch("/api/services").then(res => res.json()).then(setServices)
-    fetch("/api/test-cases").then(res => res.json()).then(setTestCases)
-  }, [])
 
   const handleExport = async () => {
     // Busca todos os testes
@@ -106,12 +99,7 @@ export function TestsHeader() {
           <ExcelActions onExport={handleExport} onImport={handleImport} />
         </div>
       </div>
-      <TestFormModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        services={services}
-        testCases={testCases}
-      />
+      <TestFormModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </>
   )
 }

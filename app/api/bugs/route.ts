@@ -1,51 +1,105 @@
 import { NextResponse } from "next/server"
 import { query } from "@/lib/db"
+import { z } from "zod"
+import { revalidatePath } from "next/cache"
+
+const bugSchema = z.object({
+  name: z.string().min(1, "O nome é obrigatório"),
+  description: z.string().optional(),
+  status: z.string().min(1, "O status é obrigatório"),
+  criticality: z.string().min(1, "A criticidade é obrigatória"),
+  risk: z.string().min(1, "O risco é obrigatório"),
+  test_id: z.number().min(1, "O teste relacionado é obrigatório"),
+  service_id: z.number().min(1, "O serviço é obrigatório"),
+  // Campos que parecem estar no formulário mas não na tabela, tornando opcionais para evitar erros
+  user_story: z.string().optional(),
+  gherkin: z.string().optional(),
+  evidence: z.string().optional(),
+  observations: z.string().optional(),
+  responsible_qa: z.string().optional(),
+  responsible_dev: z.string().optional(),
+})
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const format = searchParams.get("format")
+
+  try {
+    if (format === "list") {
+      const result = await query("SELECT id, name FROM bugs ORDER BY name")
+      return NextResponse.json({ bugs: result.rows })
+    } else {
+      const result = await query("SELECT * FROM bugs ORDER BY created_at DESC")
+      return NextResponse.json(result.rows)
+    }
+  } catch (error) {
+    console.error("Erro ao buscar bugs:", error)
+    return NextResponse.json({ error: "Erro interno do servidor ao buscar bugs" }, { status: 500 })
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json()
+    const data = bugSchema.parse(body)
+
+    const result = await query(
+      `INSERT INTO bugs (name, description, status, criticality, risk, test_id, service_id, user_story, gherkin, evidence, observations, responsible_qa, responsible_dev, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW()) RETURNING *`,
+      [
+        data.name,
+        data.description,
+        data.status,
+        data.criticality,
+        data.risk,
+        data.test_id,
+        data.service_id,
+        data.user_story,
+        data.gherkin,
+        data.evidence,
+        data.observations,
+        data.responsible_qa,
+        data.responsible_dev,
+      ]
+    )
+
+    revalidatePath("/")
+    return NextResponse.json({ success: true, bug: result.rows[0] })
+  } catch (error) {
+    console.error("Erro ao criar bug:", error)
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: "Dados inválidos", details: error.errors }, { status: 400 })
+    }
+    return NextResponse.json({ error: "Erro ao criar bug" }, { status: 500 })
+  }
+}
 
 export async function PUT(request: Request) {
   try {
-    const bug = await request.json()
-    if (!bug.id) {
-      return NextResponse.json({ error: "ID é obrigatório para atualizar" }, { status: 400 })
-    }
-    if (!bug.name || !bug.status || !bug.service_id || !bug.test_id) {
-      return NextResponse.json({ error: "Nome, status, serviço e teste são obrigatórios" }, { status: 400 })
-    }
+    const body = await request.json()
+    const { id, ...data } = bugSchema.extend({ id: z.number() }).parse(body)
+
     const result = await query(
-      `UPDATE bugs SET
-        name = $1,
-        description = $2,
-        user_story = $3,
-        gherkin = $4,
-        evidence = $5,
-        status = $6,
-        criticality = $7,
-        risk = $8,
-        observations = $9,
-        service_id = $10,
-        test_id = $11,
-        responsible_qa = $12,
-        responsible_dev = $13
-      WHERE id = $14 RETURNING *`,
+      `UPDATE bugs SET name = $1, description = $2, status = $3, criticality = $4, risk = $5, test_id = $6, service_id = $7, user_story = $8, gherkin = $9, evidence = $10, observations = $11, responsible_qa = $12, responsible_dev = $13 WHERE id = $14 RETURNING *`,
       [
-        bug.name,
-        bug.description,
-        bug.user_story,
-        bug.gherkin,
-        bug.evidence,
-        bug.status,
-        bug.criticality,
-        bug.risk,
-        bug.observations,
-        bug.service_id ? Number(bug.service_id) : null,
-        bug.test_id ? Number(bug.test_id) : null,
-        bug.responsible_qa,
-        bug.responsible_dev,
-        bug.id
+        data.name,
+        data.description,
+        data.status,
+        data.criticality,
+        data.risk,
+        data.test_id,
+        data.service_id,
+        data.user_story,
+        data.gherkin,
+        data.evidence,
+        data.observations,
+        data.responsible_qa,
+        data.responsible_dev,
+        id,
       ]
     )
-    if (result.rows.length === 0) {
-      return NextResponse.json({ error: "Bug não encontrado" }, { status: 404 })
-    }
+
+    revalidatePath("/")
     return NextResponse.json({ success: true, bug: result.rows[0] })
   } catch (error) {
     console.error("Erro ao atualizar bug:", error)
@@ -53,55 +107,28 @@ export async function PUT(request: Request) {
   }
 }
 
-export async function GET() {
-  try {
-    const result = await query(`
-      SELECT * FROM bugs
-      ORDER BY 
-        CASE status
-          WHEN 'open' THEN 1
-          WHEN 'in_progress' THEN 2
-          WHEN 'resolved' THEN 3
-          WHEN 'closed' THEN 4
-        END,
-        created_at DESC
-      LIMIT 50
-    `)
-    return NextResponse.json(result.rows)
-  } catch (error) {
-    return NextResponse.json({ error: 'Erro ao buscar bugs' }, { status: 500 })
-  }
-}
+const deleteBugSchema = z.object({
+  id: z.number(),
+})
 
-export async function POST(request: Request) {
+export async function DELETE(request: Request) {
   try {
-    const bug = await request.json()
-    if (!bug.name || !bug.status || !bug.service_id || !bug.test_id) {
-      return NextResponse.json({ error: "Nome, status, serviço e teste são obrigatórios" }, { status: 400 })
+    const body = await request.json()
+    const { id } = deleteBugSchema.parse(body)
+
+    if (!id) {
+      return NextResponse.json({ error: "O ID do bug é obrigatório." }, { status: 400 })
     }
-    const result = await query(
-      `INSERT INTO bugs (
-        name, description, user_story, gherkin, evidence, status, criticality, risk, observations, service_id, test_id, responsible_qa, responsible_dev
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
-      [
-        bug.name,
-        bug.description,
-        bug.user_story,
-        bug.gherkin,
-        bug.evidence,
-        bug.status,
-        bug.criticality,
-        bug.risk,
-        bug.observations,
-        bug.service_id ? Number(bug.service_id) : null,
-        bug.test_id ? Number(bug.test_id) : null,
-        bug.responsible_qa,
-        bug.responsible_dev,
-      ]
-    )
-    return NextResponse.json({ success: true, bug: result.rows[0] })
+
+    await query("DELETE FROM bugs WHERE id = $1", [id])
+
+    revalidatePath("/")
+    return NextResponse.json({ message: "Bug deletado com sucesso" }, { status: 200 })
   } catch (error) {
-    console.error("Erro ao criar bug:", error)
-    return NextResponse.json({ error: "Erro ao criar bug" }, { status: 500 })
+    console.error("Erro ao deletar bug:", error)
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: "Dados inválidos", details: error.errors }, { status: 400 })
+    }
+    return NextResponse.json({ error: "Erro interno do servidor ao deletar o bug" }, { status: 500 })
   }
 }
