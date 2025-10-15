@@ -4,7 +4,7 @@ import { useState } from "react"
 import { lightFormat } from "date-fns"
 import type { Test } from "@/lib/types"
 import { TestFormModal } from "./test-form-modal"
- import { MoreVertical, User, Computer, Calendar, Tag } from "lucide-react"
+import { MoreVertical, User, Computer, Calendar, Tag, MapPin, Terminal } from "lucide-react"
 
 const RESULT_COLORS: Record<string, string> = {
   aprovado: "bg-success/20 text-success border-success/30",
@@ -71,17 +71,29 @@ export function TestCard({ test }: TestCardProps) {
                     {TEST_TYPE_LABELS[test.type] || test.type}
                   </span>
                 )}
+                {test.execution_location && (
+                  <span className="text-xs px-2 py-1 rounded-md bg-secondary border border-border flex items-center gap-1.5">
+                    <MapPin className="w-3 h-3" />
+                    {test.execution_location}
+                  </span>
+                )}
               </div>
             </div>
             <button onClick={() => setIsEditModalOpen(true)} className="p-1 rounded-lg hover:bg-accent transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0 ml-2">
               <MoreVertical className="w-5 h-5 text-muted-foreground" />
             </button>
           </div>
-          {test.description && <p className="text-sm text-muted-foreground line-clamp-2 mt-3">{test.description}</p>}
+          {test.description && <p className="text-sm text-muted-foreground line-clamp-2 mt-4">{test.description}</p>}
         </div>
-        <div className="mt-4 pt-3 border-t border-border flex items-center justify-end text-xs text-muted-foreground gap-1.5">
-          <Calendar className="w-3 h-3" />
-          <span>{test.created_at ? lightFormat(new Date(test.created_at), "dd/MM/yyyy") : "Data indisponível"}</span>
+        <div className="mt-4 pt-3 border-t border-border flex items-center justify-between text-xs text-muted-foreground gap-4">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <User className="w-3 h-3 flex-shrink-0" />
+            <span className="truncate" title={test.responsible_qa || "Não atribuído"}>{test.responsible_qa || "Não atribuído"}</span>
+          </div>
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <Calendar className="w-3 h-3" />
+            <span>{test.created_at ? lightFormat(new Date(test.created_at), "dd/MM/yyyy") : "Data indisponível"}</span>
+          </div>
         </div>
       </div>
 
