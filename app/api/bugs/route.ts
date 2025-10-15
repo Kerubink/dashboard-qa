@@ -28,6 +28,7 @@ export async function GET(request: NextRequest) {
   const risk = searchParams.get("risk")
   const startDate = searchParams.get("startDate")
   const endDate = searchParams.get("endDate")
+  const responsible = searchParams.get("responsible")
 
   const whereClauses: string[] = []
   const params: (string | number)[] = []
@@ -35,25 +36,25 @@ export async function GET(request: NextRequest) {
 
   if (queryText) {
     whereClauses.push(
-      `(b.name ILIKE $${paramIndex} OR b.description ILIKE $${paramIndex} OR b.responsible_qa ILIKE $${paramIndex} OR b.responsible_dev ILIKE $${paramIndex})`
+      `(b.name ILIKE $${paramIndex} OR b.description ILIKE $${paramIndex})`
     )
     params.push(`%${queryText}%`)
     paramIndex++
   }
 
-  if (status) {
+  if (status && status !== "all") {
     whereClauses.push(`b.status = $${paramIndex}`)
     params.push(status)
     paramIndex++
   }
 
-  if (criticality) {
+  if (criticality && criticality !== "all") {
     whereClauses.push(`b.criticality = $${paramIndex}`)
     params.push(criticality)
     paramIndex++
   }
 
-  if (risk) {
+  if (risk && risk !== "all") {
     whereClauses.push(`b.risk = $${paramIndex}`)
     params.push(risk)
     paramIndex++
@@ -68,6 +69,12 @@ export async function GET(request: NextRequest) {
   if (endDate) {
     whereClauses.push(`b.found_date <= $${paramIndex}`)
     params.push(endDate)
+    paramIndex++
+  }
+
+  if (responsible) {
+    whereClauses.push(`(b.responsible_qa ILIKE $${paramIndex} OR b.responsible_dev ILIKE $${paramIndex})`)
+    params.push(`%${responsible}%`)
     paramIndex++
   }
 

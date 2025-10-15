@@ -5,16 +5,22 @@ import { TestCasesFilters } from "@/components/test-cases/test-cases-filters"
 
 export const dynamic = 'force-dynamic'
 
-export default function TestCasesPage() {
+export default function TestCasesPage({ searchParams }: { searchParams?: { [key: string]: string | string[] | undefined } }) {
+  const currentPage = Number(searchParams?.page) || 1
+  const filters = {
+    query: searchParams?.query?.toString(),
+    status: searchParams?.status?.toString(),
+    service: searchParams?.service?.toString(),
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <TestCasesHeader />
 
       <div className="p-6 space-y-6">
         <TestCasesFilters />
-
         <Suspense fallback={<TestCasesListSkeleton />}>
-          <TestCasesList />
+          <TestCasesList currentPage={currentPage} filters={filters} />
         </Suspense>
       </div>
     </div>

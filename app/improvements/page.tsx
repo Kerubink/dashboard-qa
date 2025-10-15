@@ -5,16 +5,22 @@ import { ImprovementsFilters } from "@/components/improvements/improvements-filt
 
 export const dynamic = 'force-dynamic'
 
-export default function ImprovementsPage() {
+export default function ImprovementsPage({ searchParams }: { searchParams?: { [key: string]: string | string[] | undefined } }) {
+  const currentPage = Number(searchParams?.page) || 1
+  const filters = {
+    query: searchParams?.query?.toString(),
+    status: searchParams?.status?.toString(),
+    area: searchParams?.area?.toString(),
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <ImprovementsHeader />
 
       <div className="p-6 space-y-6">
         <ImprovementsFilters />
-
         <Suspense fallback={<ImprovementsListSkeleton />}>
-          <ImprovementsList />
+          <ImprovementsList currentPage={currentPage} filters={filters} />
         </Suspense>
       </div>
     </div>

@@ -5,16 +5,22 @@ import { PerformanceFilters } from "@/components/performance/performance-filters
 
 export const dynamic = 'force-dynamic'
 
-export default function PerformancePage() {
+export default function PerformancePage({ searchParams }: { searchParams?: { [key: string]: string | string[] | undefined } }) {
+  const currentPage = Number(searchParams?.page) || 1
+  const filters = {
+    query: searchParams?.query?.toString(),
+    status: searchParams?.status?.toString(),
+    service: searchParams?.service?.toString(),
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <PerformanceHeader />
 
       <div className="p-6 space-y-6">
         <PerformanceFilters />
-
         <Suspense fallback={<PerformancePlansListSkeleton />}>
-          <PerformancePlansList />
+          <PerformancePlansList currentPage={currentPage} filters={filters} />
         </Suspense>
       </div>
     </div>

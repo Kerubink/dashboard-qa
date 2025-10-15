@@ -1,16 +1,28 @@
 "use client"
 
 import { Search, Filter, Calendar } from "lucide-react"
-import { useState } from "react"
+import { useState, useTransition } from "react"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 
 export function BugsFilters() {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [criticalityFilter, setCriticalityFilter] = useState("all")
-  const [riskFilter, setRiskFilter] = useState("all")
-  const [startDate, setStartDate] = useState("")
-  const [endDate, setEndDate] = useState("")
+  const searchParams = useSearchParams()
+  const pathname = usePathname()
+  const router = useRouter()
+  const [isPending, startTransition] = useTransition()
   const [showAdvanced, setShowAdvanced] = useState(false)
+
+  function handleFilterChange(key: string, value: string) {
+    const params = new URLSearchParams(searchParams)
+    if (value && value !== "all") {
+      params.set(key, value)
+    } else {
+      params.delete(key)
+    }
+    params.delete("page") // Reset to first page
+    startTransition(() => {
+      router.replace(`${pathname}?${params.toString()}`)
+    })
+  }
 
   return (
     <div className="bg-card border border-border rounded-lg p-4 space-y-4">
@@ -20,15 +32,15 @@ export function BugsFilters() {
           <input
             type="text"
             placeholder="Buscar bugs..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            defaultValue={searchParams.get("query") || ""}
+            onChange={(e) => handleFilterChange("query", e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
 
         <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
+          defaultValue={searchParams.get("status") || "all"}
+          onChange={(e) => handleFilterChange("status", e.target.value)}
           className="px-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary"
         >
           <option value="all">Todos os status</option>
@@ -39,8 +51,8 @@ export function BugsFilters() {
         </select>
 
         <select
-          value={criticalityFilter}
-          onChange={(e) => setCriticalityFilter(e.target.value)}
+          defaultValue={searchParams.get("criticality") || "all"}
+          onChange={(e) => handleFilterChange("criticality", e.target.value)}
           className="px-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary"
         >
           <option value="all">Todas criticidades</option>
@@ -64,8 +76,8 @@ export function BugsFilters() {
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">Risco</label>
             <select
-              value={riskFilter}
-              onChange={(e) => setRiskFilter(e.target.value)}
+              defaultValue={searchParams.get("risk") || "all"}
+              onChange={(e) => handleFilterChange("risk", e.target.value)}
               className="w-full px-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <option value="all">Todos os riscos</option>
@@ -82,8 +94,8 @@ export function BugsFilters() {
               <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <input
                 type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                defaultValue={searchParams.get("startDate") || ""}
+                onChange={(e) => handleFilterChange("startDate", e.target.value)}
                 className="w-full pl-10 pr-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
@@ -95,8 +107,8 @@ export function BugsFilters() {
               <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <input
                 type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
+                defaultValue={searchParams.get("endDate") || ""}
+                onChange={(e) => handleFilterChange("endDate", e.target.value)}
                 className="w-full pl-10 pr-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
@@ -107,6 +119,8 @@ export function BugsFilters() {
             <input
               type="text"
               placeholder="Nome do QA/Dev"
+              defaultValue={searchParams.get("responsible") || ""}
+              onChange={(e) => handleFilterChange("responsible", e.target.value)}
               className="w-full px-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
