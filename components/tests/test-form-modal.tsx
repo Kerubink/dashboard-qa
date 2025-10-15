@@ -21,13 +21,27 @@ export function TestFormModal({ isOpen, onClose, test }: TestFormModalProps) {
     isOpen ? "/api/test-cases?format=list" : null,
     fetcher
   );
+  const { data: servicesData } = useSWR<{ services: { id: number; name: string }[] }>(
+    isOpen ? "/api/services" : null,
+    fetcher
+  );
 
   const router = useRouter()
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    result: "pendente",
-    type: "funcional",
+    result: "pendente" as const,
+    type: "funcional" as const,
+    execution_type: "manual" as const,
+    execution_location: "",
+    execution_method: "",
+    responsible_qa: "",
+    responsible_dev: "",
+    jira_link: "",
+    bug_link: "",
+    evidence: "",
+    test_data: "",
+    service_id: "",
     test_case_id: "",
   })
   const [error, setError] = useState("")
@@ -39,26 +53,45 @@ export function TestFormModal({ isOpen, onClose, test }: TestFormModalProps) {
         description: test.description || "",
         result: test.result || "pendente",
         type: test.type || "funcional",
+        execution_type: test.execution_type || "manual",
+        execution_location: test.execution_location || "",
+        execution_method: test.execution_method || "",
+        responsible_qa: test.responsible_qa || "",
+        responsible_dev: test.responsible_dev || "",
+        jira_link: test.jira_link || "",
+        bug_link: test.bug_link || "",
+        evidence: test.evidence || "",
+        test_data: test.test_data || "",
+        service_id: test.service_id ? String(test.service_id) : "",
         test_case_id: test.test_case_id ? String(test.test_case_id) : "",
       })
     } else {
       setFormData({
         name: "",
         description: "",
-        result: "pendente",
-        type: "funcional",
+        result: "pendente" as const,
+        type: "funcional" as const,
+        execution_type: "manual" as const,
+        execution_location: "",
+        execution_method: "",
+        responsible_qa: "",
+        responsible_dev: "",
+        jira_link: "",
+        bug_link: "",
+        evidence: "",
+        test_data: "",
+        service_id: "",
         test_case_id: "",
       })
     }
-    setError("")
   }, [test, isOpen])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
 
-    if (!formData.test_case_id) {
-      setError("Selecione um Caso de Teste antes de salvar.")
+    if (!formData.service_id) {
+      setError("Selecione um Serviço antes de salvar.")
       return
     }
 
@@ -70,6 +103,7 @@ export function TestFormModal({ isOpen, onClose, test }: TestFormModalProps) {
         body: JSON.stringify({
           ...formData,
           test_case_id: formData.test_case_id ? Number(formData.test_case_id) : null,
+          service_id: Number(formData.service_id),
           ...(isEdit ? { id: test.id } : {}),
         }),
       })
@@ -113,7 +147,7 @@ export function TestFormModal({ isOpen, onClose, test }: TestFormModalProps) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-foreground mb-2">Nome do Teste *</label>
@@ -142,6 +176,7 @@ export function TestFormModal({ isOpen, onClose, test }: TestFormModalProps) {
               <label className="block text-sm font-medium text-foreground mb-2">Tipo *</label>
               <select value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value })} className="w-full px-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary">
                 <option value="funcional">Funcional</option>
+                <option value="exploratório">Exploratório</option>
                 <option value="integracao">Integração</option>
                 <option value="regressao">Regressão</option>
                 <option value="unidade">Unidade</option>
@@ -159,6 +194,36 @@ export function TestFormModal({ isOpen, onClose, test }: TestFormModalProps) {
               </select>
             </div>
 
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Tipo de Execução *</label>
+              <select value={formData.execution_type} onChange={(e) => setFormData({ ...formData, execution_type: e.target.value })} className="w-full px-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary">
+                <option value="manual">Manual</option>
+                <option value="automatico">Automático</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Local de Execução</label>
+              <input
+                type="text"
+                value={formData.execution_location}
+                onChange={(e) => setFormData({ ...formData, execution_location: e.target.value })}
+                className="w-full px-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="Ex: HML, PRD, Local"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Método de Execução</label>
+              <input
+                type="text"
+                value={formData.execution_method}
+                onChange={(e) => setFormData({ ...formData, execution_method: e.target.value })}
+                className="w-full px-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="Ex: Postman, Cypress, Manual"
+              />
+            </div>
+
             <div className="md:col-span-2">
               <SearchableSelect
                 label="Caso de Teste Relacionado *"
@@ -169,12 +234,62 @@ export function TestFormModal({ isOpen, onClose, test }: TestFormModalProps) {
                 required
               />
             </div>
+
+            <div className="md:col-span-2">
+              <SearchableSelect
+                label="Serviço *"
+                options={servicesData?.services || []}
+                value={formData.service_id}
+                onChange={(value) => setFormData({ ...formData, service_id: value })}
+                placeholder="Buscar serviço..."
+                required
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">QA Responsável</label>
+              <input type="text" value={formData.responsible_qa} onChange={(e) => setFormData({ ...formData, responsible_qa: e.target.value })} className="w-full px-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Nome do analista de QA" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Desenvolvedor Responsável</label>
+              <input type="text" value={formData.responsible_dev} onChange={(e) => setFormData({ ...formData, responsible_dev: e.target.value })} className="w-full px-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Nome do desenvolvedor" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Link do Jira</label>
+              <input type="url" value={formData.jira_link} onChange={(e) => setFormData({ ...formData, jira_link: e.target.value })} className="w-full px-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary" placeholder="https://seu-jira.com/browse/TASK-123" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Link do Bug</label>
+              <input type="url" value={formData.bug_link} onChange={(e) => setFormData({ ...formData, bug_link: e.target.value })} className="w-full px-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Link para o bug reportado" />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-foreground mb-2">Massa de Dados</label>
+              <textarea
+                value={formData.test_data}
+                onChange={(e) => setFormData({ ...formData, test_data: e.target.value })}
+                rows={3}
+                className="w-full px-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                placeholder="Dados necessários para executar o teste (usuários, senhas, IDs, etc.)"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-foreground mb-2">Evidências</label>
+              <textarea
+                value={formData.evidence}
+                onChange={(e) => setFormData({ ...formData, evidence: e.target.value })}
+                rows={3}
+                className="w-full px-4 py-2 bg-secondary text-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                placeholder="Links para prints, vídeos, logs, etc."
+              />
+            </div>
           </div>
 
           {error && (
-            <div className="text-red-500 text-sm mb-2">{error}</div>
+            <div className="text-red-500 text-sm mt-4">{error}</div>
           )}
-          <div className="flex items-center justify-end gap-3 pt-6 border-t border-border">
+          <div className="flex items-center justify-end gap-3 pt-6 border-t border-border mt-8">
             <button
               type="button"
               onClick={onClose}

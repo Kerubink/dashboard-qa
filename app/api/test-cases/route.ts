@@ -24,15 +24,13 @@ export async function GET(request: Request) {
       const result = await query("SELECT id, name FROM test_cases ORDER BY name")
       return NextResponse.json({ testCases: result.rows })
     } else {
-      const result = await query("SELECT * FROM test_cases ORDER BY created_at DESC")
       if (getNextId === "true") {
-        // Busca o próximo valor diretamente da sequência do PostgreSQL para evitar inconsistências com registros deletados.
-        // A função pg_get_serial_sequence obtém o nome da sequência para a coluna 'id' da tabela 'test_cases'.
-        // A função nextval avança a sequência e retorna o novo valor.
-        const nextIdResult = await query("SELECT nextval(pg_get_serial_sequence('test_cases', 'id')) as next_id")
-        const nextId = nextIdResult.rows[0]?.next_id || 1
+        // Conta o número total de casos de teste para determinar o próximo ID sequencialmente.
+        const countResult = await query("SELECT COUNT(*) as total FROM test_cases")
+        const nextId = (Number(countResult.rows[0].total) || 0) + 1
         return NextResponse.json({ nextId })
       }
+      const result = await query("SELECT * FROM test_cases ORDER BY created_at DESC")
       return NextResponse.json(result.rows)
     }
   } catch (error) {

@@ -8,7 +8,17 @@ const testSchema = z.object({
   description: z.string().optional(),
   result: z.string().min(1, "O resultado é obrigatório"),
   type: z.string().min(1, "O tipo é obrigatório"),
-  test_case_id: z.number().min(1, "O caso de teste é obrigatório"),
+  execution_type: z.string().optional(),
+  execution_location: z.string().optional().nullable(),
+  execution_method: z.string().optional().nullable(),
+  responsible_qa: z.string().optional().nullable(),
+  responsible_dev: z.string().optional().nullable(),
+  jira_link: z.string().optional().nullable(),
+  bug_link: z.string().optional().nullable(),
+  evidence: z.string().optional().nullable(),
+  test_data: z.string().optional().nullable(),
+  service_id: z.number().min(1, "O serviço é obrigatório"),
+  test_case_id: z.number().nullable().optional(),
 })
 
 export async function GET(request: Request) {
@@ -35,9 +45,9 @@ export async function POST(request: Request) {
     const data = testSchema.parse(body)
 
     const result = await query(
-      `INSERT INTO tests (name, description, result, type, test_case_id, created_at)
-       VALUES ($1, $2, $3, $4, $5, NOW()) RETURNING *`,
-      [data.name, data.description, data.result, data.type, data.test_case_id]
+      `INSERT INTO tests (name, description, result, type, test_case_id, service_id, execution_type, execution_location, execution_method, responsible_qa, responsible_dev, jira_link, bug_link, evidence, test_data, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW()) RETURNING *`,
+      [data.name, data.description, data.result, data.type, data.test_case_id, data.service_id, data.execution_type, data.execution_location, data.execution_method, data.responsible_qa, data.responsible_dev, data.jira_link, data.bug_link, data.evidence, data.test_data]
     )
 
     revalidatePath("/")
@@ -61,9 +71,11 @@ export async function PUT(request: Request) {
     }
 
     const result = await query(
-      `UPDATE tests SET name = $1, description = $2, result = $3, type = $4, test_case_id = $5
-       WHERE id = $6 RETURNING *`,
-      [data.name, data.description, data.result, data.type, data.test_case_id, id]
+      `UPDATE tests SET name = $1, description = $2, result = $3, type = $4, test_case_id = $5, service_id = $6, execution_type = $7,
+        execution_location = $8, execution_method = $9, responsible_qa = $10, responsible_dev = $11, jira_link = $12,
+        bug_link = $13, evidence = $14, test_data = $15, updated_at = NOW()
+       WHERE id = $16 RETURNING *`,
+      [data.name, data.description, data.result, data.type, data.test_case_id, data.service_id, data.execution_type, data.execution_location, data.execution_method, data.responsible_qa, data.responsible_dev, data.jira_link, data.bug_link, data.evidence, data.test_data, id]
     )
 
     if (result.rows.length === 0) {

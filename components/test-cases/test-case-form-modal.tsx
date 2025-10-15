@@ -32,7 +32,7 @@ export function TestCaseFormModal({ isOpen, onClose, testCase }: TestCaseFormMod
   )
   const { data: nextIdData } = useSWR<{ nextId: number }>(
     isOpen && !testCase ? "/api/test-cases?nextId=true" : null,
-    fetcher
+    fetcher, { revalidateOnFocus: false }
   )
 
   const router = useRouter()
