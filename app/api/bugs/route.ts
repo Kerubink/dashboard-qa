@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { query } from "@/lib/db"
 import { z } from "zod"
 import { revalidatePath } from "next/cache"
@@ -20,18 +20,62 @@ const bugSchema = z.object({
   responsible_dev: z.string().optional(),
 })
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url)
-  const format = searchParams.get("format")
+export async function GET(request: NextRequest) {
+  const searchParams = request.nextUrl.searchParams
+  const queryText = searchParams.get("query")
+  const status = searchParams.get("status")
+  const criticality = searchParams.get("criticality")
+  const risk = searchParams.get("risk")
+  const startDate = searchParams.get("startDate")
+  const endDate = searchParams.get("endDate")
+
+  const whereClauses: string[] = []
+  const params: (string | number)[] = []
+  let paramIndex = 1
+
+  if (queryText) {
+    whereClauses.push(
+      `(b.name ILIKE $${paramIndex} OR b.description ILIKE $${paramIndex} OR b.responsible_qa ILIKE $${paramIndex} OR b.responsible_dev ILIKE $${paramIndex})`
+    )
+    params.push(`%${queryText}%`)
+    paramIndex++
+  }
+
+  if (status) {
+    whereClauses.push(`b.status = $${paramIndex}`)
+    params.push(status)
+    paramIndex++
+  }
+
+  if (criticality) {
+    whereClauses.push(`b.criticality = $${paramIndex}`)
+    params.push(criticality)
+    paramIndex++
+  }
+
+  if (risk) {
+    whereClauses.push(`b.risk = $${paramIndex}`)
+    params.push(risk)
+    paramIndex++
+  }
+
+  if (startDate) {
+    whereClauses.push(`b.found_date >= $${paramIndex}`)
+    params.push(startDate)
+    paramIndex++
+  }
+
+  if (endDate) {
+    whereClauses.push(`b.found_date <= $${paramIndex}`)
+    params.push(endDate)
+    paramIndex++
+  }
+
+  const whereStatement = whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : ""
 
   try {
-    if (format === "list") {
-      const result = await query("SELECT id, name FROM bugs ORDER BY name")
-      return NextResponse.json({ bugs: result.rows })
-    } else {
-      const result = await query("SELECT * FROM bugs ORDER BY created_at DESC")
-      return NextResponse.json(result.rows)
-    }
+    const result = await query(`SELECT b.*, s.name as service_name FROM bugs b LEFT JOIN services s ON b.service_id = s.id ${whereStatement} ORDER BY b.created_at DESC`, params)
+    return NextResponse.json(result.rows)
   } catch (error) {
     console.error("Erro ao buscar bugs:", error)
     return NextResponse.json({ error: "Erro interno do servidor ao buscar bugs" }, { status: 500 })
