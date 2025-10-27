@@ -16,7 +16,7 @@ export function ServicesHeader() {
   }
 
   const handleExport = async () => {
-    const response = await fetch("/api/services")
+    const response = await fetch("/api/services/export")
     const services = await response.json()
 
     const data = services.map((service: any) => ({

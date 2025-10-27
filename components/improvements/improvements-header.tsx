@@ -17,30 +17,15 @@ export function ImprovementsHeader() {
   }, [])
 
   const handleExport = async () => {
-    const response = await fetch("/api/improvements")
-    const improvements = await response.json()
-
-    const data = improvements.map((improvement: any) => ({
-      Nome: improvement.name,
-      Descrição: improvement.description,
-      Status: improvement.status,
-      Prioridade: improvement.priority,
-      Impacto: improvement.impact,
-      "Link Teste": improvement.test_link || "",
-      "User Story": improvement.user_story || "",
-      Gherkin: improvement.gherkin || "",
-      Evidências: improvement.evidence || "",
-      "Data Proposta": formatDateForExcel(improvement.proposed_date),
-      "Data Implementada": formatDateForExcel(improvement.implemented_date),
-      Observações: improvement.observations || "",
-    }))
+    const response = await fetch("/api/improvements/export");
+    const data = await response.json();
 
     return {
       data,
       filename: `melhorias_${new Date().toISOString().split("T")[0]}`,
       sheetName: "Melhorias",
-    }
-  }
+    };
+  };
 
   const handleImport = async (data: any[]) => {
     try {

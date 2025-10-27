@@ -305,3 +305,13 @@ export async function getTestCases() {
     service_id: Number(row.service_id),
   }));
 }
+
+export async function getAllImprovementsForExport() {
+  const result = await query('SELECT * FROM improvements ORDER BY id DESC');
+  return result.rows;
+}
+
+export async function getAllServicesForExport() {
+  const result = await query('SELECT * FROM services ORDER BY id DESC');
+  return result.rows;
+}
