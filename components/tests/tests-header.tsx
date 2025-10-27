@@ -13,52 +13,56 @@ export function TestsHeader() {
 
   const handleExport = async () => {
     // Busca todos os testes
-    const response = await fetch("/api/tests/export")
-    const tests = await response.json()
+    const response = await fetch("/api/tests/export");
+    const tests = await response.json();
 
     // Formata dados para Excel
     const data = tests.map((test: any) => ({
-      Nome: test.name,
-      Descrição: test.description,
-      Tipo: test.type,
-      Resultado: test.result,
-      Execução: test.execution_type,
-      Responsável: test.responsible,
-      Serviço: test.service,
-      Data: formatDateForExcel(test.test_date),
+      "Nome": test.name,
+      "Descrição": test.description,
+      "Serviço": test.service_name,
+      "Caso de Teste": test.test_case_name,
+      "Tipo": test.type,
+      "Resultado": test.result,
+      "Tipo de Execução": test.execution_type,
+      "Local de Execução": test.execution_location,
+      "Método de Execução": test.execution_method,
+      "QA Responsável": test.responsible_qa,
+      "Dev Responsável": test.responsible_dev,
+      "Data de Execução": formatDateForExcel(test.execution_date),
       "Link Jira": test.jira_link || "",
       "Link Bug": test.bug_link || "",
       "Massa de Dados": test.test_data || "",
-      Ambiente: test.environment || "",
-      Evidências: test.evidence || "",
-      Observações: test.observations || "",
-    }))
+      "Evidências": test.evidence || "",
+    }));
 
     return {
       data,
       filename: `testes_${new Date().toISOString().split("T")[0]}`,
       sheetName: "Testes",
-    }
+    };
   }
 
   const handleImport = async (data: any[]) => {
     try {
       // Converte dados do Excel para formato da API
       const tests = data.map((row: any) => ({
-        name: row["Nome"],
-        description: row["Descrição"],
-        type: row["Tipo"],
-        result: row["Resultado"],
-        execution_type: row["Execução"],
-        responsible: row["Responsável"],
-        service: row["Serviço"],
-        test_date: parseDateFromExcel(row["Data"]),
-        jira_link: row["Link Jira"],
-        bug_link: row["Link Bug"],
-        test_data: row["Massa de Dados"],
-        environment: row["Ambiente"],
-        evidence: row["Evidências"],
-        observations: row["Observações"],
+        name: row["Nome"] || "",
+        description: row["Descrição"] || "",
+        service_name: row["Serviço"],
+        test_case_name: row["Caso de Teste"],
+        type: row["Tipo"] || "funcional",
+        result: row["Resultado"] || "pendente",
+        execution_type: row["Tipo de Execução"] || "manual",
+        execution_location: row["Local de Execução"] || "",
+        execution_method: row["Método de Execução"] || "",
+        responsible_qa: row["QA Responsável"] || "",
+        responsible_dev: row["Dev Responsável"] || "",
+        execution_date: parseDateFromExcel(row["Data de Execução"]),
+        jira_link: row["Link Jira"] || "",
+        bug_link: row["Link Bug"] || "",
+        test_data: row["Massa de Dados"] || "",
+        evidence: row["Evidências"] || "",
       }))
 
       // Envia para API

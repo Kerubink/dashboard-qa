@@ -23,16 +23,13 @@ export function ImprovementsHeader() {
     const data = improvements.map((improvement: any) => ({
       "Nome": improvement.name,
       "Descrição": improvement.description,
-      "Status": improvement.status,
-      "Prioridade": improvement.priority,
-      "Impacto": improvement.impact,
-      "Link Teste": improvement.test_link,
+      "Serviço": improvement.service_name,
       "User Story": improvement.user_story,
-      "Gherkin": improvement.gherkin,
       "Evidências": improvement.evidence,
-      "Data Proposta": formatDateForExcel(improvement.proposed_date),
-      "Data Implementada": formatDateForExcel(improvement.implemented_date),
+      "Status": improvement.status,
       "Observações": improvement.observations,
+      "Data de Início": formatDateForExcel(improvement.start_date),
+      "Data de Fim": formatDateForExcel(improvement.end_date),
     }));
 
     return {
@@ -45,18 +42,15 @@ export function ImprovementsHeader() {
   const handleImport = async (data: any[]) => {
     try {
       const improvements = data.map((row: any) => ({
-        name: row["Nome"],
-        description: row["Descrição"],
-        status: row["Status"],
-        priority: row["Prioridade"],
-        impact: row["Impacto"],
-        test_link: row["Link Teste"],
-        user_story: row["User Story"],
-        gherkin: row["Gherkin"],
-        evidence: row["Evidências"],
-        proposed_date: parseDateFromExcel(row["Data Proposta"]),
-        implemented_date: parseDateFromExcel(row["Data Implementada"]),
-        observations: row["Observações"],
+        name: row["Nome"] || "",
+        description: row["Descrição"] || "",
+        service_name: row["Serviço"],
+        user_story: row["User Story"] || "",
+        evidence: row["Evidências"] || "",
+        status: row["Status"] || "proposed",
+        observations: row["Observações"] || "",
+        start_date: parseDateFromExcel(row["Data de Início"]),
+        end_date: parseDateFromExcel(row["Data de Fim"]),
       }))
 
       const response = await fetch("/api/improvements/import", {

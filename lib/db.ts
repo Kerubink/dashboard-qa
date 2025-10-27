@@ -307,31 +307,70 @@ export async function getTestCases() {
 }
 
 export async function getAllImprovementsForExport() {
-  const result = await query('SELECT * FROM improvements ORDER BY id DESC');
+  const result = await query(`
+    SELECT 
+      i.name, i.description, s.name as service_name, i.user_story, i.evidence, 
+      i.status, i.observations, i.start_date, i.end_date 
+    FROM improvements i
+    LEFT JOIN services s ON i.service_id = s.id
+    ORDER BY i.id DESC
+  `);
   return result.rows;
 }
 
 export async function getAllServicesForExport() {
-  const result = await query('SELECT * FROM services ORDER BY id DESC');
+  const result = await query('SELECT name, description, created_at FROM services ORDER BY id DESC');
   return result.rows;
 }
 
 export async function getAllBugsForExport() {
-  const result = await query('SELECT * FROM bugs ORDER BY id DESC');
+  const result = await query(`
+    SELECT 
+      b.name, b.description, s.name as service_name, t.name as test_name,
+      b.status, b.criticality, b.risk, b.responsible_qa, b.responsible_dev,
+      b.user_story, b.gherkin, b.evidence, b.found_date, b.resolved_date, b.observations
+    FROM bugs b
+    LEFT JOIN services s ON b.service_id = s.id
+    LEFT JOIN tests t ON b.test_id = t.id
+    ORDER BY b.id DESC
+  `);
   return result.rows;
 }
 
 export async function getAllTestCasesForExport() {
-  const result = await query('SELECT * FROM test_cases ORDER BY id DESC');
+  const result = await query(`
+    SELECT 
+      tc.name, s.name as service_name, tc.user_story, tc.gherkin, tc.test_data,
+      tc.status, tc.is_automated, tc.created_at, tc.observations
+    FROM test_cases tc
+    LEFT JOIN services s ON tc.service_id = s.id
+    ORDER BY tc.id DESC
+  `);
   return result.rows;
 }
 
 export async function getAllTestsForExport() {
-  const result = await query('SELECT * FROM tests ORDER BY id DESC');
+  const result = await query(`
+    SELECT 
+      t.name, t.description, s.name as service_name, tc.name as test_case_name,
+      t.type, t.result, t.execution_type, t.execution_location, t.execution_method,
+      t.responsible_qa, t.responsible_dev, t.execution_date, t.jira_link, t.bug_link,
+      t.test_data, t.evidence
+    FROM tests t
+    LEFT JOIN services s ON t.service_id = s.id
+    LEFT JOIN test_cases tc ON t.test_case_id = tc.id
+    ORDER BY t.id DESC
+  `);
   return result.rows;
 }
 
 export async function getAllPerformanceForExport() {
-  const result = await query('SELECT * FROM performance_plans ORDER BY id DESC');
+  const result = await query(`
+    SELECT 
+      p.name, p.description, s.name as service, p.test_type as type, p.status,
+      p.target_metrics, p.test_data, p.results, p.execution_date, p.observations
+    FROM performance_plans p
+    LEFT JOIN services s ON p.service_id = s.id
+    ORDER BY p.id DESC`);
   return result.rows;
 }

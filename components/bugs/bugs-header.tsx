@@ -16,42 +16,48 @@ export function BugsHeader() {
     const bugs = await response.json();
 
     const data = bugs.map((bug: any) => ({
-      Nome: bug.name,
-      Descrição: bug.description,
-      Status: bug.status,
-      Prioridade: bug.priority,
-      Severidade: bug.severity,
-      "Link Teste": bug.test_link || "",
+      "Nome": bug.name,
+      "Descrição": bug.description,
+      "Serviço": bug.service_name,
+      "Teste Relacionado": bug.test_name,
+      "Status": bug.status,
+      "Criticidade": bug.criticality,
+      "Risco": bug.risk,
+      "QA Responsável": bug.responsible_qa,
+      "Dev Responsável": bug.responsible_dev,
       "User Story": bug.user_story || "",
-      Gherkin: bug.gherkin || "",
-      Evidências: bug.evidence || "",
+      "Gherkin": bug.gherkin || "",
+      "Evidências": bug.evidence || "",
       "Data Encontrado": formatDateForExcel(bug.found_date),
       "Data Resolvido": formatDateForExcel(bug.resolved_date),
-      Observações: bug.observations || "",
-    }))
+      "Observações": bug.observations || "",
+    }));
 
     return {
       data,
       filename: `bugs_${new Date().toISOString().split("T")[0]}`,
       sheetName: "Bugs",
-    }
+    };
   }
 
   const handleImport = async (data: any[]) => {
     try {
       const bugs = data.map((row: any) => ({
-        name: row["Nome"],
-        description: row["Descrição"],
-        status: row["Status"],
-        priority: row["Prioridade"],
-        severity: row["Severidade"],
-        test_link: row["Link Teste"],
-        user_story: row["User Story"],
-        gherkin: row["Gherkin"],
-        evidence: row["Evidências"],
+        name: row["Nome"] || "",
+        description: row["Descrição"] || "",
+        service_name: row["Serviço"],
+        test_name: row["Teste Relacionado"],
+        status: row["Status"] || "open",
+        criticality: row["Criticidade"] || "media",
+        risk: row["Risco"] || "medio",
+        responsible_qa: row["QA Responsável"] || "",
+        responsible_dev: row["Dev Responsável"] || "",
+        user_story: row["User Story"] || "",
+        gherkin: row["Gherkin"] || "",
+        evidence: row["Evidências"] || "",
         found_date: parseDateFromExcel(row["Data Encontrado"]),
         resolved_date: parseDateFromExcel(row["Data Resolvido"]),
-        observations: row["Observações"],
+        observations: row["Observações"] || "",
       }))
 
       const response = await fetch("/api/bugs/import", {

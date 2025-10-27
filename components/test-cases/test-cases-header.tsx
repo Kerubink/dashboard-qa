@@ -17,39 +17,37 @@ export function TestCasesHeader() {
   }, [])
 
   const handleExport = async () => {
-    const response = await fetch("/api/test-cases/export")
-    const testCases = await response.json()
+    const response = await fetch("/api/test-cases/export");
+    const testCases = await response.json();
 
     const data = testCases.map((tc: any) => ({
-      Nome: tc.name,
-      Descrição: tc.description,
-      Serviço: tc.service,
+      "Nome": tc.name,
+      "Serviço": tc.service_name,
       "User Story": tc.user_story || "",
-      Gherkin: tc.gherkin || "",
+      "Gherkin": tc.gherkin || "",
       "Massa de Dados": tc.test_data || "",
-      Status: tc.status,
+      "Status": tc.status,
       "Automação IA": tc.is_automated ? "Sim" : "Não",
-      "Data Criação": formatDateForExcel(tc.created_date),
-      Observações: tc.observations || "",
-    }))
+      "Data Criação": formatDateForExcel(tc.created_at),
+      "Observações": tc.observations || "",
+    }));
 
     return {
       data,
-      filename: `casos_teste_${new Date().toISOString().split("T")[0]}`,
+      filename: `casos_teste_${new Date().toISOString().split("T")[0]}`, 
       sheetName: "Casos de Teste",
-    }
+    };
   }
 
   const handleImport = async (data: any[]) => {
     try {
       const testCases = data.map((row: any) => ({
-        name: row["Nome"],
-        description: row["Descrição"],
-        service: row["Serviço"],
+        name: row["Nome"] || "",
+        service_name: row["Serviço"],
         user_story: row["User Story"],
         gherkin: row["Gherkin"],
         test_data: row["Massa de Dados"],
-        status: row["Status"],
+        status: row["Status"] || "pending",
         is_automated: row["Automação IA"] === "Sim",
         observations: row["Observações"],
       }))
