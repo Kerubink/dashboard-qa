@@ -315,3 +315,23 @@ export async function getAllServicesForExport() {
   const result = await query('SELECT * FROM services ORDER BY id DESC');
   return result.rows;
 }
+
+export async function getAllBugsForExport() {
+  const result = await query('SELECT * FROM bugs ORDER BY id DESC');
+  return result.rows;
+}
+
+export async function getAllTestCasesForExport() {
+  const result = await query('SELECT * FROM test_cases ORDER BY id DESC');
+  return result.rows;
+}
+
+export async function getAllTestsForExport() {
+  const result = await query('SELECT * FROM tests ORDER BY id DESC');
+  return result.rows;
+}
+
+export async function getAllPerformanceForExport() {
+  const result = await query('SELECT * FROM performance_plans ORDER BY id DESC');
+  return result.rows;
+}
