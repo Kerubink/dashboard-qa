@@ -10,7 +10,7 @@ export function PerformanceHeader() {
   const [isModalOpen, setIsModalOpen] = useState(false)
 
   const handleExport = async () => {
-    const response = await fetch("/api/performance")
+    const response = await fetch("/api/performance/export")
     const plans = await response.json()
 
     const data = plans.map((plan: any) => ({

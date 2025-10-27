@@ -18,7 +18,22 @@ export function ImprovementsHeader() {
 
   const handleExport = async () => {
     const response = await fetch("/api/improvements/export");
-    const data = await response.json();
+    const improvements = await response.json();
+
+    const data = improvements.map((improvement: any) => ({
+      "Nome": improvement.name,
+      "Descrição": improvement.description,
+      "Status": improvement.status,
+      "Prioridade": improvement.priority,
+      "Impacto": improvement.impact,
+      "Link Teste": improvement.test_link,
+      "User Story": improvement.user_story,
+      "Gherkin": improvement.gherkin,
+      "Evidências": improvement.evidence,
+      "Data Proposta": formatDateForExcel(improvement.proposed_date),
+      "Data Implementada": formatDateForExcel(improvement.implemented_date),
+      "Observações": improvement.observations,
+    }));
 
     return {
       data,

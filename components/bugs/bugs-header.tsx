@@ -12,8 +12,8 @@ export function BugsHeader() {
   const [isModalOpen, setIsModalOpen] = useState(false)
 
   const handleExport = async () => {
-    const response = await fetch("/api/bugs")
-    const bugs = await response.json()
+    const response = await fetch("/api/bugs/export");
+    const bugs = await response.json();
 
     const data = bugs.map((bug: any) => ({
       Nome: bug.name,

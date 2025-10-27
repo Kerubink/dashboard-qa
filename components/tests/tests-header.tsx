@@ -13,7 +13,7 @@ export function TestsHeader() {
 
   const handleExport = async () => {
     // Busca todos os testes
-    const response = await fetch("/api/tests")
+    const response = await fetch("/api/tests/export")
     const tests = await response.json()
 
     // Formata dados para Excel

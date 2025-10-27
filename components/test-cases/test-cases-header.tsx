@@ -17,7 +17,7 @@ export function TestCasesHeader() {
   }, [])
 
   const handleExport = async () => {
-    const response = await fetch("/api/test-cases")
+    const response = await fetch("/api/test-cases/export")
     const testCases = await response.json()
 
     const data = testCases.map((tc: any) => ({
